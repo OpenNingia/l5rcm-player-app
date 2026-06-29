@@ -52,6 +52,16 @@ class SaveParserTest {
     }
 
     @Test
+    fun weaponStrengthAcceptsNonNumericNAString() {
+        // Desktop writes `weapon.strength or 'N/A'` (outfit.py), so strength/min_str are an
+        // int OR the literal string "N/A". Parsing must not crash on the string form.
+        val save = load("kitsuki_jondavid.l5r")
+        val wakizashi = save.weapons.first { it.name == "Wakizashi" }
+        assertEquals("N/A", wakizashi.strength)
+        assertEquals("N/A", wakizashi.min_str)
+    }
+
+    @Test
     fun defaultsApplyForOmittedAndLegacyFields() {
         val save = SaveParser.parse("""{"name":"X"}""")
         assertEquals(listOf(2, 2, 2, 2, 2, 2, 2, 2), save.starting_traits)

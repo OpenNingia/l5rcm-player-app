@@ -28,8 +28,10 @@ data class WeaponOutfit(
     val dr: String = "",
     val dr_alt: String = "",
     val range: String = "",
-    val strength: Int = 0,
-    val min_str: Int = 0,
+    // Desktop writes `weapon.strength or 'N/A'` (outfit.py), so these are an int OR the
+    // string "N/A" — typed as String to tolerate both. Display-only; not used in derivation.
+    val strength: String = "N/A",
+    val min_str: String = "N/A",
     val qty: Int = 1,
     val skill_id: String? = null,
     val skill_nm: String = "",
