@@ -4,11 +4,8 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.OptIn
 import androidx.camera.core.CameraSelector
-import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
-import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -36,11 +33,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.google.mlkit.vision.barcode.BarcodeScanner
-import com.google.mlkit.vision.barcode.BarcodeScannerOptions
-import com.google.mlkit.vision.barcode.BarcodeScanning
-import com.google.mlkit.vision.barcode.common.Barcode
-import com.google.mlkit.vision.common.InputImage
 import com.l5rcm.companion.data.save.qr.QrChunkAssembler
 import com.l5rcm.companion.data.save.qr.QrTransferException
 import com.l5rcm.companion.ui.theme.L5RTheme
@@ -107,17 +99,13 @@ private fun CameraScanner(onResult: (String) -> Unit, onCancel: () -> Unit) {
                     val preview = Preview.Builder().build().also {
                         it.setSurfaceProvider(previewView.surfaceProvider)
                     }
-                    val scanner = BarcodeScanning.getClient(
-                        BarcodeScannerOptions.Builder()
-                            .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
-                            .build(),
-                    )
                     val analysis = ImageAnalysis.Builder()
                         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                         .build()
-                    analysis.setAnalyzer(analysisExecutor) { proxy ->
-                        scanFrame(scanner, proxy) { value ->
-                            if (finished) return@scanFrame
+                    analysis.setAnalyzer(
+                        analysisExecutor,
+                        qrFrameAnalyzer { value ->
+                            if (finished) return@qrFrameAnalyzer
                             val json = try {
                                 assembler.offer(value)
                             } catch (e: QrTransferException) {
@@ -130,8 +118,8 @@ private fun CameraScanner(onResult: (String) -> Unit, onCancel: () -> Unit) {
                                 finished = true
                                 ContextCompat.getMainExecutor(ctx).execute { onResult(json) }
                             }
-                        }
-                    }
+                        },
+                    )
                     provider.unbindAll()
                     provider.bindToLifecycle(
                         lifecycleOwner,
@@ -210,18 +198,4 @@ private fun PermissionPrompt(onGrant: () -> Unit, onCancel: () -> Unit) {
             Text("CANCEL", style = L5RTheme.type.label.copy(color = L5RTheme.colors.inkMuted))
         }
     }
-}
-
-/** Runs ML Kit barcode detection on one frame, forwarding each decoded QR text to [onValue]. */
-@OptIn(ExperimentalGetImage::class)
-private fun scanFrame(scanner: BarcodeScanner, proxy: ImageProxy, onValue: (String) -> Unit) {
-    val media = proxy.image
-    if (media == null) {
-        proxy.close()
-        return
-    }
-    val image = InputImage.fromMediaImage(media, proxy.imageInfo.rotationDegrees)
-    scanner.process(image)
-        .addOnSuccessListener { barcodes -> barcodes.forEach { it.rawValue?.let(onValue) } }
-        .addOnCompleteListener { proxy.close() }
 }
