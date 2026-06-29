@@ -1,0 +1,9 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. The actual look is driven by the Compose
+         L5RTheme (see ui/theme); this entry exists only so the Activity has a
+         valid platform theme before Compose takes over. -->
+    <style name="Theme.L5RCMCompanion" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">#EDE0C0</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+</resources>
