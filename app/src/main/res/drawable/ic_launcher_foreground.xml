@@ -1,0 +1,22 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Five rings motif (L5R) in gold on the adaptive foreground layer. -->
+    <path
+        android:fillColor="#B8860B"
+        android:pathData="M54,30m-9,0a9,9 0,1 1,18 0a9,9 0,1 1,-18 0" />
+    <path
+        android:fillColor="#8B2A1A"
+        android:pathData="M38,46m-9,0a9,9 0,1 1,18 0a9,9 0,1 1,-18 0" />
+    <path
+        android:fillColor="#2A4A7A"
+        android:pathData="M70,46m-9,0a9,9 0,1 1,18 0a9,9 0,1 1,-18 0" />
+    <path
+        android:fillColor="#5C4A30"
+        android:pathData="M44,66m-9,0a9,9 0,1 1,18 0a9,9 0,1 1,-18 0" />
+    <path
+        android:fillColor="#4A2A6A"
+        android:pathData="M64,66m-9,0a9,9 0,1 1,18 0a9,9 0,1 1,-18 0" />
+</vector>

@@ -1,0 +1,303 @@
+{
+  "starting_traits": [
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2
+  ],
+  "starting_void": 2,
+  "void": 0,
+  "attribs": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "honor": 0,
+  "glory": 0,
+  "infamy": 0.0,
+  "status": 0,
+  "taint": 0.0,
+  "unsaved": false,
+  "version": "3.17",
+  "name": "Ochiai",
+  "clan": "dragon",
+  "family": "dragon_hoshi",
+  "insight": 0,
+  "advans": [
+    {
+      "type": "rank",
+      "desc": "Insight Rank 1. School: Mirumoto Bushi School rank 1 ",
+      "rule": null,
+      "timestamp": 1740127449.1269906,
+      "cost": 0,
+      "rank": 1,
+      "school": "dragon_mirumoto_bushi_school",
+      "school_rank": 1,
+      "replaced": null,
+      "skills": [
+        "defense",
+        "iaijutsu",
+        "kenjutsu",
+        "lore_shugenja",
+        "lore_theology",
+        "meditation",
+        "athletics"
+      ],
+      "skills_to_choose": [],
+      "emphases": {
+        "kenjutsu": [
+          "Katana"
+        ]
+      },
+      "emphases_to_choose": [],
+      "spells": [],
+      "spells_to_choose": [],
+      "gained_spells_count": 0,
+      "outfit": [
+        "Light Armor",
+        "Sturdy Clothing",
+        "Daisho",
+        "any 1 weapon",
+        "Traveling Pack"
+      ],
+      "money": [
+        5,
+        0,
+        0
+      ],
+      "affinities": [],
+      "affinities_to_choose": [],
+      "deficiencies": [],
+      "deficiencies_to_choose": [],
+      "kiho": [],
+      "gained_kiho_count": 0,
+      "merits": [],
+      "flaws": []
+    },
+    {
+      "type": "void",
+      "desc": "Void Ring, Rank 3 to 4. Cost: 24 xp",
+      "rule": null,
+      "timestamp": 1753196670.3547287,
+      "cost": 24
+    },
+    {
+      "type": "attrib",
+      "desc": "agility, Rank 2 to 3. Cost: 12 xp",
+      "rule": null,
+      "timestamp": 1753196671.127072,
+      "cost": 12,
+      "attrib": 6
+    },
+    {
+      "type": "attrib",
+      "desc": "strength, Rank 2 to 3. Cost: 12 xp",
+      "rule": null,
+      "timestamp": 1753196677.7914338,
+      "cost": 12,
+      "attrib": 4
+    },
+    {
+      "type": "attrib",
+      "desc": "perception, Rank 2 to 3. Cost: 12 xp",
+      "rule": null,
+      "timestamp": 1753196678.637748,
+      "cost": 12,
+      "attrib": 5
+    },
+    {
+      "type": "attrib",
+      "desc": "intelligence, Rank 2 to 3. Cost: 12 xp",
+      "rule": null,
+      "timestamp": 1753196679.313465,
+      "cost": 12,
+      "attrib": 7
+    },
+    {
+      "type": "attrib",
+      "desc": "awareness, Rank 2 to 3. Cost: 12 xp",
+      "rule": null,
+      "timestamp": 1753196680.441588,
+      "cost": 12,
+      "attrib": 3
+    },
+    {
+      "type": "attrib",
+      "desc": "reflexes, Rank 2 to 3. Cost: 12 xp",
+      "rule": null,
+      "timestamp": 1753196681.2510798,
+      "cost": 12,
+      "attrib": 2
+    },
+    {
+      "type": "rank",
+      "desc": "Insight Rank 2. School: Mirumoto Bushi School rank 2 ",
+      "rule": null,
+      "timestamp": 1753196684.5497332,
+      "cost": 0,
+      "rank": 2,
+      "school": "dragon_mirumoto_bushi_school",
+      "school_rank": 2,
+      "replaced": null,
+      "skills": [],
+      "skills_to_choose": [],
+      "emphases": {},
+      "emphases_to_choose": [],
+      "spells": [],
+      "spells_to_choose": [],
+      "gained_spells_count": 0,
+      "outfit": [],
+      "money": [
+        0,
+        0,
+        0
+      ],
+      "affinities": [],
+      "affinities_to_choose": [],
+      "deficiencies": [],
+      "deficiencies_to_choose": [],
+      "kiho": [],
+      "gained_kiho_count": 0,
+      "merits": [],
+      "flaws": []
+    },
+    {
+      "type": "attrib",
+      "desc": "stamina, Rank 3 to 4. Cost: 16 xp",
+      "rule": null,
+      "timestamp": 1753196686.814874,
+      "cost": 16,
+      "attrib": 0
+    },
+    {
+      "type": "attrib",
+      "desc": "willpower, Rank 2 to 3. Cost: 12 xp",
+      "rule": null,
+      "timestamp": 1753196687.587099,
+      "cost": 12,
+      "attrib": 1
+    },
+    {
+      "type": "attrib",
+      "desc": "willpower, Rank 3 to 4. Cost: 16 xp",
+      "rule": null,
+      "timestamp": 1753196687.9509826,
+      "cost": 16,
+      "attrib": 1
+    },
+    {
+      "type": "rank",
+      "desc": "Insight Rank 3. School: Hitomi Kikage Zumi rank 1 ",
+      "rule": null,
+      "timestamp": 1753196694.8692799,
+      "cost": 0,
+      "rank": 3,
+      "school": "dragon_ob_hitomi_kikage_zumi",
+      "school_rank": 1,
+      "replaced": null,
+      "skills": [],
+      "skills_to_choose": [],
+      "emphases": {},
+      "emphases_to_choose": [],
+      "spells": [],
+      "spells_to_choose": [],
+      "gained_spells_count": 0,
+      "outfit": [],
+      "money": [
+        0,
+        0,
+        0
+      ],
+      "affinities": [],
+      "affinities_to_choose": [],
+      "deficiencies": [],
+      "deficiencies_to_choose": [],
+      "kiho": [],
+      "gained_kiho_count": 0,
+      "merits": [],
+      "flaws": []
+    },
+    {
+      "type": "perk",
+      "desc": "Multiple Schools Rank 1, XP Cost: 10",
+      "rule": "multiple_schools",
+      "timestamp": 1753196694.8692799,
+      "cost": 10,
+      "perk": "multiple_schools",
+      "rank": 1,
+      "tag": "merit",
+      "extra": ""
+    }
+  ],
+  "armor": {
+    "tn": 0,
+    "rd": 0,
+    "name": "",
+    "desc": "",
+    "rule": "",
+    "cost": ""
+  },
+  "weapons": [],
+  "outfit": [],
+  "money": [
+    0,
+    0,
+    0
+  ],
+  "attrib_costs": [
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4
+  ],
+  "void_cost": 6,
+  "health_multiplier": 2,
+  "spells_per_rank": 3,
+  "exp_limit": 4000,
+  "wounds": 0,
+  "void_points": 0,
+  "extra_notes": "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\np, li { white-space: pre-wrap; }\nhr { height: 1px; border-width: 0; }\nli.unchecked::marker { content: \"\\2610\"; }\nli.checked::marker { content: \"\\2612\"; }\n</style></head><body style=\" font-family:'Segoe UI'; font-size:9pt; font-weight:400; font-style:normal;\">\n<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'MS Shell Dlg 2'; font-size:8.1pt;\"><br /></p></body></html>",
+  "insight_calculation": 1,
+  "pack_refs": [
+    {
+      "id": "core",
+      "name": "Core book",
+      "version": "5.0"
+    }
+  ],
+  "modifiers": [],
+  "properties": {
+    "sex": "",
+    "age": "",
+    "height": "",
+    "weight": "",
+    "hair": "",
+    "eyes": "",
+    "father": "",
+    "mother": "",
+    "brothers": "",
+    "marsta": "",
+    "sisters": "",
+    "spouse": "",
+    "childr": "",
+    "money": [
+      0,
+      0,
+      0
+    ],
+    "equip": []
+  }
+}
