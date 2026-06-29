@@ -14,6 +14,8 @@ import kotlinx.serialization.Serializable
 data class SaveModel(
     // 2.1 Identity & metadata
     val name: String = "",
+    /** Stable character identity (UUID4). May be null/absent in old saves — see docs §2.1. */
+    val uuid: String? = null,
     val clan: String? = null,
     val family: String? = null,
     val version: String = "0.0",

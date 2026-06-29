@@ -35,7 +35,8 @@ class AppPreferences(private val context: Context) {
         prefs[KEY_INSTALLED_PACKS]?.let { decodePacks(it) } ?: emptyList()
     }
 
-    val lastCharacterUri: Flow<String?> = context.dataStore.data.map { it[KEY_LAST_CHARACTER] }
+    /** uuid of the last opened character (resume-on-launch from the local `<uuid>.l5r` copy). */
+    val lastCharacterUuid: Flow<String?> = context.dataStore.data.map { it[KEY_LAST_CHARACTER] }
 
     suspend fun installedPacksNow(): List<InstalledPack> = installedPacks.first()
 
@@ -62,9 +63,9 @@ class AppPreferences(private val context: Context) {
         }
     }
 
-    suspend fun setLastCharacterUri(uri: String?) {
+    suspend fun setLastCharacterUuid(uuid: String?) {
         context.dataStore.edit { prefs ->
-            if (uri == null) prefs.remove(KEY_LAST_CHARACTER) else prefs[KEY_LAST_CHARACTER] = uri
+            if (uuid == null) prefs.remove(KEY_LAST_CHARACTER) else prefs[KEY_LAST_CHARACTER] = uuid
         }
     }
 
@@ -79,6 +80,6 @@ class AppPreferences(private val context: Context) {
 
     private companion object {
         val KEY_INSTALLED_PACKS = stringPreferencesKey("installed_packs")
-        val KEY_LAST_CHARACTER = stringPreferencesKey("last_character_uri")
+        val KEY_LAST_CHARACTER = stringPreferencesKey("last_character_uuid")
     }
 }

@@ -9,12 +9,14 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.l5rcm.companion.ui.imports.ImportRouter
+import com.l5rcm.companion.ui.imports.qr.QrScanScreen
 import com.l5rcm.companion.ui.library.LibraryScreen
 import com.l5rcm.companion.ui.theme.L5RTheme
 
 object Routes {
     const val MAIN = "main"
     const val LIBRARY = "library"
+    const val QR_SCAN = "qr_scan"
 }
 
 /** Top-level navigation. The clan accent follows the loaded character. */
@@ -25,8 +27,9 @@ fun AppNav(viewModel: AppViewModel = hiltViewModel()) {
 
     L5RTheme(clanId = clanId) {
         val navController = rememberNavController()
-        // Stable lambda to avoid recreating on each recomposition.
+        // Stable lambdas to avoid recreating on each recomposition.
         val openLibrary = remember { { navController.navigate(Routes.LIBRARY); Unit } }
+        val scanQr = remember { { navController.navigate(Routes.QR_SCAN); Unit } }
 
         NavHost(navController = navController, startDestination = Routes.MAIN) {
             composable(Routes.MAIN) {
@@ -34,6 +37,7 @@ fun AppNav(viewModel: AppViewModel = hiltViewModel()) {
                     state = characterState,
                     viewModel = viewModel,
                     onOpenLibrary = openLibrary,
+                    onScanQr = scanQr,
                 )
             }
             composable(Routes.LIBRARY) {
@@ -43,6 +47,15 @@ fun AppNav(viewModel: AppViewModel = hiltViewModel()) {
                         navController.popBackStack()
                         viewModel.retryPending()
                     },
+                )
+            }
+            composable(Routes.QR_SCAN) {
+                QrScanScreen(
+                    onResult = { json ->
+                        navController.popBackStack()
+                        viewModel.importCharacterFromJson(json)
+                    },
+                    onCancel = { navController.popBackStack() },
                 )
             }
         }
