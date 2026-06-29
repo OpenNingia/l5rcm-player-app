@@ -6,6 +6,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -100,6 +107,13 @@ private fun TopBar(title: String, onMenu: () -> Unit) {
         Modifier
             .fillMaxWidth()
             .background(L5RTheme.colors.paperDark)
+            // edge-to-edge is on: keep the bar's content clear of the status bar and
+            // the front-camera cutout (otherwise the hamburger lands under the lens).
+            .windowInsetsPadding(
+                WindowInsets.statusBars
+                    .union(WindowInsets.displayCutout)
+                    .only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
+            )
             .height(56.dp)
             .padding(horizontal = Spacing.s4),
         verticalAlignment = Alignment.CenterVertically,
