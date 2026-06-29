@@ -33,6 +33,22 @@ JDK 17 + Android SDK (`ANDROID_SDK_ROOT`). No Gradle install needed (wrapper com
 
 CI (`.github/workflows/ci.yml`) runs `test` + `assembleDebug` on push/PR.
 
+### Build flavors (`dist` dimension)
+
+Two flavors differ **only** in the QR decoder — the lone proprietary dependency:
+
+- `floss` → **zxing-cpp** (`io.github.zxing-cpp:android`, Apache-2.0). The FOSS build
+  published on **F-Droid**; contains no proprietary deps. This is the alphabetically-first
+  flavor, so plain `test` / `assembleDebug` resolve to it.
+- `full` → **ML Kit** (`com.google.mlkit:barcode-scanning`, bundled on-device, no Play
+  Services, but proprietary). Shipped on Play Store / as a direct APK.
+
+The decoder lives behind `qrFrameAnalyzer(onValue): ImageAnalysis.Analyzer` (same package +
+signature in `app/src/{floss,full}/kotlin/.../ui/imports/qr/QrFrameAnalyzer.kt`); the CameraX
+camera/permission/overlay UI in `main` is flavor-agnostic. The F-Droid recipe builds `floss`
+(`gradle: [floss]`). `test` / `assembleDebug` build **both** flavors — narrow to
+`testFlossDebugUnitTest` / `assembleFlossDebug` if you only need the FOSS one.
+
 ## Architecture
 
 Single Gradle module `:app`, package root `com.l5rcm.companion`. Layered MVVM + Hilt.
@@ -66,7 +82,8 @@ ui/
   widgets/   RicePaperOverlay (procedural, fixed-seed LCG), OrnateDivider, SheetPanel, RingCard,
              PointTrack, StatRow, SectionHeader.
   imports/   ImportRouter (SAF picker + state routing), import landing, missing-datapack gate.
-             qr/QrScanScreen — CameraX + ML Kit scanner driving QrChunkAssembler.
+             qr/QrScanScreen — CameraX scanner driving QrChunkAssembler; the QR decoder
+             (qrFrameAnalyzer) is flavor-specific (zxing-cpp / ML Kit — see Build flavors).
   library/   LibraryScreen — catalog install / enable-disable / remove.
   sheet/     SheetScreen (drawer nav) + SheetSections (read-only sections).
   AppViewModel (single Hilt VM), AppNav (NavHost), AppState.

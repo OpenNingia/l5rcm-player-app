@@ -31,6 +31,15 @@ android {
         }
     }
 
+    // Distribution flavors differ only in the QR decoder (the lone proprietary dependency):
+    //   floss → zxing-cpp (Apache-2.0), the FOSS build published on F-Droid.
+    //   full  → ML Kit, the build shipped on Play Store / as a direct APK.
+    flavorDimensions += "dist"
+    productFlavors {
+        create("floss") { dimension = "dist" }
+        create("full") { dimension = "dist" }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -82,12 +91,14 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.androidx.datastore.preferences)
 
-    // QR import: CameraX preview/analysis + ML Kit (bundled, on-device, no Play Services).
+    // QR import: CameraX preview/analysis is shared; the QR decoder is flavor-specific
+    // (see src/floss and src/full implementations of qrFrameAnalyzer).
     implementation(libs.androidx.camera.core)
     implementation(libs.androidx.camera.camera2)
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
-    implementation(libs.mlkit.barcode.scanning)
+    "flossImplementation"(libs.zxing.cpp) // Apache-2.0, FOSS — F-Droid build
+    "fullImplementation"(libs.mlkit.barcode.scanning) // bundled on-device, no Play Services, but proprietary
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
