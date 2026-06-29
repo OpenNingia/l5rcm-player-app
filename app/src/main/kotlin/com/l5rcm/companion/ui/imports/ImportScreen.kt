@@ -36,6 +36,7 @@ fun ImportRouter(
     state: CharacterUiState,
     viewModel: AppViewModel,
     onOpenLibrary: () -> Unit,
+    onScanQr: () -> Unit,
 ) {
     val picker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
@@ -53,10 +54,10 @@ fun ImportRouter(
             MissingPacksScreen(state, onOpenLibrary = onOpenLibrary)
 
         is CharacterUiState.Error ->
-            ImportLanding(message = state.message, onImport = openPicker, onOpenLibrary = onOpenLibrary)
+            ImportLanding(state.message, onImport = openPicker, onScanQr = onScanQr, onOpenLibrary = onOpenLibrary)
 
         CharacterUiState.Empty ->
-            ImportLanding(message = null, onImport = openPicker, onOpenLibrary = onOpenLibrary)
+            ImportLanding(null, onImport = openPicker, onScanQr = onScanQr, onOpenLibrary = onOpenLibrary)
     }
 }
 
@@ -76,7 +77,12 @@ private fun LoadingScreen() = ScreenBackground {
 }
 
 @Composable
-private fun ImportLanding(message: String?, onImport: () -> Unit, onOpenLibrary: () -> Unit) =
+private fun ImportLanding(
+    message: String?,
+    onImport: () -> Unit,
+    onScanQr: () -> Unit,
+    onOpenLibrary: () -> Unit,
+) =
     ScreenBackground {
         Column(
             modifier = Modifier.fillMaxSize().padding(Spacing.s6).verticalScroll(rememberScrollState()),
@@ -112,6 +118,13 @@ private fun ImportLanding(message: String?, onImport: () -> Unit, onOpenLibrary:
                 modifier = Modifier.padding(top = Spacing.s5),
             ) {
                 Text("IMPORT .L5R", style = L5RTheme.type.label)
+            }
+            OutlinedButton(
+                onClick = onScanQr,
+                shape = Radii.button,
+                modifier = Modifier.padding(top = Spacing.s2),
+            ) {
+                Text("SCAN QR CODE", style = L5RTheme.type.label.copy(color = L5RTheme.colors.ink))
             }
             OutlinedButton(
                 onClick = onOpenLibrary,

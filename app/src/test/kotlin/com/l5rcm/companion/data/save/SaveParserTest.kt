@@ -71,6 +71,15 @@ class SaveParserTest {
     }
 
     @Test
+    fun uuidIsParsedWhenPresentAndNullWhenAbsent() {
+        assertEquals(
+            "3f2a9c10-7b4e-4a2d-9f1c-2e5b8d6a0c11",
+            SaveParser.parse("""{"name":"X","uuid":"3f2a9c10-7b4e-4a2d-9f1c-2e5b8d6a0c11"}""").uuid,
+        )
+        assertEquals(null, SaveParser.parse("""{"name":"X"}""").uuid)
+    }
+
+    @Test
     fun unknownAdvancementTypeFallsBackToGeneric() {
         val save = SaveParser.parse(
             """{"advans":[{"type":"future_thing","cost":3,"desc":"d"}]}""",

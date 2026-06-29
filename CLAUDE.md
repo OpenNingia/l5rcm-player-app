@@ -40,6 +40,9 @@ Single Gradle module `:app`, package root `com.l5rcm.companion`. Layered MVVM + 
 ```
 data/
   save/      .l5r parsing → SaveModel
+             - qr/QrChunkAssembler: reassembles a .l5r from animated multi-frame QR codes
+               (gzip+base64, chunked). Pure JVM. Shared wire format + golden vector:
+               ../l5r-character-manager-3/docs/QR_IMPORT_FORMAT.md (desktop writes, app reads).
              - Advancement: sealed class, custom JsonContentPolymorphicSerializer keyed on
                the literal "type" string (AdvancementSerializer). Unknown types → GenericAdv.
              - SaveParser: lenient Json (ignoreUnknownKeys, coerceInputValues).
@@ -63,6 +66,7 @@ ui/
   widgets/   RicePaperOverlay (procedural, fixed-seed LCG), OrnateDivider, SheetPanel, RingCard,
              PointTrack, StatRow, SectionHeader.
   imports/   ImportRouter (SAF picker + state routing), import landing, missing-datapack gate.
+             qr/QrScanScreen — CameraX + ML Kit scanner driving QrChunkAssembler.
   library/   LibraryScreen — catalog install / enable-disable / remove.
   sheet/     SheetScreen (drawer nav) + SheetSections (read-only sections).
   AppViewModel (single Hilt VM), AppNav (NavHost), AppState.
@@ -116,5 +120,4 @@ JVM unit tests (`app/src/test`) are the safety net for the reimplementation:
 ## Future phases (not built in v1)
 
 v1.1 session state (Room: wounds/void/spell-slots overlay, never writes the `.l5r`) · v1.2 dice roller
-(port `drcore.py`) · v1.3 combat tracker (own character) · later: QR/share import, `ModifierDef`
-expression engine, i18n.
+(port `drcore.py`) · v1.3 combat tracker (own character) · later: `ModifierDef` expression engine, i18n.

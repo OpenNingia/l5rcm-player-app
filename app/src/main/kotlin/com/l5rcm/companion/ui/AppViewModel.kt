@@ -7,13 +7,13 @@ import com.l5rcm.companion.data.catalog.CatalogEntry
 import com.l5rcm.companion.data.catalog.CatalogException
 import com.l5rcm.companion.data.repository.CharacterRepository
 import com.l5rcm.companion.data.repository.DatapackRepository
+import com.l5rcm.companion.data.repository.StoredCharacter
 import com.l5rcm.companion.data.save.SaveModel
 import com.l5rcm.companion.domain.rules.CharacterDeriver
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -34,9 +34,9 @@ class AppViewModel @Inject constructor(
     private val _library = MutableStateFlow(LibraryUiState())
     val library: StateFlow<LibraryUiState> = _library.asStateFlow()
 
-    /** Save + uri held while we resolve missing datapacks. */
+    /** Save + uuid held while we resolve missing datapacks. */
     private var pendingSave: SaveModel? = null
-    private var pendingUri: Uri? = null
+    private var pendingUuid: String? = null
 
     init {
         observeInstalledPacks()
@@ -53,28 +53,41 @@ class AppViewModel @Inject constructor(
 
     private fun resumeLastCharacter() {
         viewModelScope.launch {
-            val last = characterRepo.lastCharacterUri.first() ?: return@launch
-            runCatching { importCharacter(Uri.parse(last), remember = false) }
+            val stored = runCatching { characterRepo.resumeLast() }.getOrNull() ?: return@launch
+            runCatching { ingest(stored, remember = false) }
         }
     }
 
     /** Entry point from the SAF picker. */
-    fun importCharacter(uri: Uri, remember: Boolean = true) {
+    fun importCharacter(uri: Uri) {
         viewModelScope.launch {
             _character.value = CharacterUiState.Loading
             try {
-                val save = characterRepo.load(uri)
-                pendingSave = save
-                pendingUri = uri
-                if (remember) {
-                    characterRepo.persistUriPermission(uri)
-                    characterRepo.rememberLast(uri)
-                }
-                resolveOrGate(save)
+                ingest(characterRepo.importFromUri(uri), remember = true)
             } catch (e: Exception) {
                 _character.value = CharacterUiState.Error(e.message ?: "Failed to read character")
             }
         }
+    }
+
+    /** Entry point from the QR scanner (a `.l5r` document reassembled from scanned frames). */
+    fun importCharacterFromJson(json: String) {
+        viewModelScope.launch {
+            _character.value = CharacterUiState.Loading
+            try {
+                ingest(characterRepo.importFromJson(json), remember = true)
+            } catch (e: Exception) {
+                _character.value = CharacterUiState.Error(e.message ?: "Failed to read character")
+            }
+        }
+    }
+
+    /** Holds the parsed save + its uuid, optionally records it as last-opened, then resolves. */
+    private suspend fun ingest(stored: StoredCharacter, remember: Boolean) {
+        pendingSave = stored.save
+        pendingUuid = stored.uuid
+        if (remember) characterRepo.rememberLast(stored.uuid)
+        resolveOrGate(stored.save)
     }
 
     /** Re-checks dependencies and builds the sheet, or gates to the Library. */
@@ -99,7 +112,7 @@ class AppViewModel @Inject constructor(
 
     fun clearCharacter() {
         pendingSave = null
-        pendingUri = null
+        pendingUuid = null
         _character.value = CharacterUiState.Empty
         viewModelScope.launch { characterRepo.rememberLast(null) }
     }
