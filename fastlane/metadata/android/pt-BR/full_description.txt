@@ -1,0 +1,5 @@
+Um aplicativo complementar para o L5RCM, o gerenciador de personagens de Legend of the Five Rings 4ª Edição. É uma ferramenta para usar na mesa, voltada aos jogadores, não um criador de personagens: progressão e edição estão fora do escopo.
+
+Ele importa um personagem salvo pelo aplicativo de desktop L5R Character Manager — a partir de um arquivo '.l5r' ou lendo o código QR animado de vários quadros exibido pelo aplicativo de desktop —, baixa os pacotes de dados da comunidade correspondentes e exibe uma ficha de personagem somente leitura com todos os valores derivados (traços, anéis, vazio, perícias, perspicácia, ferimentos, TN, iniciativa, XP) calculados no dispositivo.
+
+O acesso à rede é usado apenas para baixar os pacotes de dados da comunidade do repositório de pacotes de dados do projeto no GitHub.

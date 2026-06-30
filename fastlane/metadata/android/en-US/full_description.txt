@@ -1,0 +1,12 @@
+A companion app for L5RCM, the Legend of the Five Rings 4th Edition character
+manager. It is a play-at-the-table tool for players, not a character builder:
+advancement and editing are out of scope.
+
+It imports a character saved by the desktop L5R Character Manager — either from a
+'.l5r' file or by scanning the animated multi-frame QR code the desktop app shows —
+downloads the matching community data packs, and renders a read-only character sheet
+with every derived value (traits, rings, void, skills, insight, wounds, TN,
+initiative, XP) computed on the device.
+
+Network access is used only to download the community data packs from the project's
+data-pack repository on GitHub.
