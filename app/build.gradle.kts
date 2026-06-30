@@ -15,8 +15,8 @@ android {
         applicationId = "com.l5rcm.companion"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "0.1.2"
+        versionCode = 4
+        versionName = "0.1.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -132,4 +132,14 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
+}
+
+// Reproducible builds (F-Droid): AGP embeds a compiled ART baseline profile
+// (assets/dexopt/baseline.prof) and reorders dex using the startup profile.
+// Neither is bit-reproducible across build environments, so F-Droid's
+// build-from-source never matches our published APK. Disabling the ArtProfile
+// tasks drops the embedded profile and keeps a stable dex layout.
+// Written config-cache-safe (the F-Droid build server uses the configuration cache).
+tasks.matching { it.name.contains("ArtProfile") }.configureEach {
+    enabled = false
 }
