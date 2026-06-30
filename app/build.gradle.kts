@@ -11,12 +11,18 @@ android {
     namespace = "com.l5rcm.companion"
     compileSdk = 35
 
+    // Reproducible builds (F-Droid): pin build-tools to 34.0.0. apksigner from
+    // build-tools >= 35 produces APKs that F-Droid's apksigcopier cannot verify
+    // (fdroid issue #3299), and 34.0.0 matches what the F-Droid build server uses
+    // for aapt2/zipalign too.
+    buildToolsVersion = "34.0.0"
+
     defaultConfig {
         applicationId = "com.l5rcm.companion"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "0.1.3"
+        versionCode = 5
+        versionName = "0.1.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
