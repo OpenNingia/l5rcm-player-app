@@ -15,10 +15,32 @@ android {
         applicationId = "com.l5rcm.companion"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "0.1.1"
+        versionCode = 3
+        versionName = "0.1.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    // Release signing. Secrets come from env vars (CI) or gradle properties (local);
+    // they are NEVER committed. When absent (e.g. F-Droid's build-from-source, or a
+    // plain debug build) the release stays unsigned — which is exactly what F-Droid
+    // compares against the developer-published, signed APK for reproducible builds.
+    val releaseStoreFile = System.getenv("SIGNING_KEYSTORE_FILE")
+        ?: (project.findProperty("signingKeystoreFile") as String?)
+    val hasReleaseSigning = releaseStoreFile != null
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = file(releaseStoreFile!!)
+                storePassword = System.getenv("SIGNING_KEYSTORE_PASSWORD")
+                    ?: project.findProperty("signingKeystorePassword") as String?
+                keyAlias = System.getenv("SIGNING_KEY_ALIAS")
+                    ?: project.findProperty("signingKeyAlias") as String?
+                keyPassword = System.getenv("SIGNING_KEY_PASSWORD")
+                    ?: project.findProperty("signingKeyPassword") as String?
+            }
+        }
     }
 
     buildTypes {
@@ -28,6 +50,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
