@@ -67,10 +67,17 @@ per character, resettable to the derived baseline.
 
 - 🔜 **Roll & Keep engine (v1.2)** — the load-bearing primitive under everything else here. Port the
   desktop's `drcore.py`: XkY roll-and-keep, **exploding tens**, the **Ten Dice Rule** (cap at 10
-  dice, convert 2-rolled→1-kept, +2 beyond 10k10), **Raises** (+5 TN each, capped at Void Ring),
-  **Void boost** (spend a point for +1k1), unskilled rolls (no explosion / no Raises), and the
-  dice-penalty rule (kept never exceeds rolled). The Ten Dice Rule and the penalty rule are the
-  easy-to-get-wrong pieces — unit-test them against the manual's worked examples.
+  dice, convert 2-rolled→1-kept, +2 beyond 10k10), **Void boost** (spend a point for +1k1), unskilled
+  rolls (no explosion / no Raises), and the dice-penalty rule (kept never exceeds rolled). The Ten
+  Dice Rule and the penalty rule are the easy-to-get-wrong pieces — unit-test them against the
+  manual's worked examples.
+- 🔜 **Raises & Free Raises** — a Raise stepper on every roll: **called Raises** each add +5 to the
+  TN (capped at the Void Ring) and, if met, improve the result; **Free Raises** (granted by mastery
+  abilities, techniques, kata…) do *not* count toward the cap and may instead reduce the TN by 5.
+  Show the effective TN live, and fail the roll if a declared Raise's TN isn't met.
+- 🔜 **Skill Mastery Abilities** — surface the mastery abilities the character has unlocked (skill
+  ranks 3/5/7) and apply the ones that touch rolls — most commonly **Free Raises** and flat
+  roll/damage bonuses — to the matching contextual rolls automatically.
 - 🔜 **Contextual rolls from the sheet** — tap a roll affordance next to a stat and the app rolls the
   matching pool automatically, pre-filling pool and TN from the deriver, and auto-applying the
   current wound penalty. Covers: **Skill** (Trait+Skill k Trait), **Trait / Ring**, **Spell**
@@ -116,12 +123,30 @@ per character, resettable to the derived baseline.
 
 **Why.** v1 intentionally does not evaluate datapack `ModifierDef` expressions; only flat
 family/school bonuses, a handful of named rule flags, and the save's own `ModifierModel` entries are
-applied. A real expression engine removes those approximations.
+applied. The deeper issue for a *play* app: the desktop only implements the modifiers needed to
+**print a static sheet** (fixed trait/TN/wound/insight bonuses). Table play also needs the
+**situational** modifiers that never show on a printed sheet because they only fire under a condition
+— *+1k0 attacking with a katana*, *+1k1 vs Shadowlands creatures*, *in Attack stance*, *once per
+skirmish*. There is no complete desktop implementation to mirror for these, so this is an *extension*,
+not a parity job. See **Design principles → Two modifier layers** below for the governing rule.
 
-- 💭 **`ModifierDef` expression engine** — evaluate datapack modifier expressions so derived values
-  match the desktop app across more schools/techniques/advantages.
+- 💭 **Static-modifier parity (Layer A)** — grow evaluation of the datapack `ModifierDef`
+  expressions that feed the *derived sheet*, so those numbers match the desktop across more
+  schools/techniques/advantages. Desktop stays the source of truth here.
 - 💭 **Desktop-oracle parity tests** — automate golden tests that export characters across
-  clans/schools/shugenja and assert the derived numbers match the desktop sheet.
+  clans/schools/shugenja and assert the derived sheet numbers match the desktop.
+- 💭 **Modifier taxonomy** — classify every `ModifierDef` as *auto* (unconditional → Layer A),
+  *conditional* (known trigger → an automatic toggle), or *manual* (fallback to showing the rule
+  text). This classification is the data both layers key off; worth documenting as a spec in the
+  desktop repo (`DATAPACK_FORMAT.md` or a new doc), per the "update the spec" rule.
+- 💭 **Graceful degradation for unsupported modifiers** — anything the engine can't evaluate is
+  surfaced as a **toggle/prompt carrying the rule text** in the relevant roll or tracker, so the
+  player applies it with one tap. Turns an unsupported modifier from a silent bug into a checklist
+  item — and works *before* any expression engine exists.
+- 💭 **Situational-modifier engine (Layer B), incremental** — grow a conditional-modifier evaluator
+  by **trigger category** (stance, weapon type, target type, once-per-X, Void spend…). Each category
+  covered moves modifiers from *manual* to *automatic*. Built additively on top of Layer A, never
+  forking the desktop's partial model.
 
 ---
 
@@ -148,6 +173,34 @@ the player switch between them instantly, without re-importing or re-picking a f
 
 - 💭 **i18n** — externalise UI strings and support additional locales (fastlane metadata tree already
   supports multiple locales).
+
+---
+
+## Design principles
+
+Cross-cutting rules that shape Themes 1, 2 and 4 — decided once, applied everywhere.
+
+### Two modifier layers
+
+L5R modifiers split into two kinds with **two different contracts**:
+
+- **Layer A — derived sheet (static).** The fixed bonuses that print on a sheet (trait/TN/wound/
+  insight). These **must match the desktop exactly**; the desktop is the source of truth and parity
+  is enforced by golden tests. This layer never diverges.
+- **Layer B — play-time modifiers (situational).** Conditional/triggered bonuses that don't appear
+  on a printed sheet and that the desktop doesn't fully model. There is **no desktop reference to be
+  "parity" with** — this layer is the app's own extension. Its contract is different: **transparent
+  and overridable, never silently wrong.**
+
+Consequences:
+
+- Keep the two layers **separate**. Layer B is additive on top of Layer A; it never rewrites the
+  parity-tested sheet numbers.
+- **Never silently ignore or guess** a modifier the engine can't evaluate. Degrade to a visible
+  toggle/prompt that shows the rule text, so the player decides (see Theme 4).
+- Always show **what was applied and why** in a roll/tracker result, and let the player override it.
+- The datapack `ModifierDef` is treated as **shared data** interpreted more deeply than the desktop
+  needs — not a fork of the desktop's partial implementation.
 
 ---
 
