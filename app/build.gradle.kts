@@ -21,10 +21,19 @@ android {
         applicationId = "com.l5rcm.companion"
         minSdk = 26
         targetSdk = 35
-        versionCode = 6
-        versionName = "0.1.5"
+        versionCode = 7
+        versionName = "0.1.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    // AGP embeds a signed "Dependency metadata" block in the APK by default. It is an
+    // encrypted, non-reproducible blob that F-Droid's scanner rejects as an extra signing
+    // block ("Found extra signing block 'Dependency metadata'"). Strip it from both the
+    // APK and the bundle so the FLOSS release stays clean and reproducible.
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
     }
 
     // Release signing. Secrets come from env vars (CI) or gradle properties (local);

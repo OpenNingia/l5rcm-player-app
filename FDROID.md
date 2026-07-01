@@ -144,6 +144,10 @@ match (all already in the repo):
   (`app/build.gradle.kts`) matching what F-Droid resolves. build-tools must stay **34.0.0**:
   apksigner from build-tools ≥ 35 produces APKs F-Droid's `apksigcopier` cannot verify
   (fdroid #3299).
+- **No AGP dependency-metadata block.** `app/build.gradle.kts` sets
+  `dependenciesInfo { includeInApk = false; includeInBundle = false }`. AGP otherwise embeds a
+  signed, encrypted "Dependency metadata" blob in the APK signing block; F-Droid's scanner
+  rejects it (`Found extra signing block 'Dependency metadata'`) and it is not reproducible.
 
 To validate a fix without waiting for F-Droid's server: F-Droid's *previous* build APK (kept as
 a failed-build artifact) was made with its JDK, so building the reference the same way and
