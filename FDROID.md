@@ -126,6 +126,35 @@ keytool -list -v -keystore release.jks -alias l5rcm | grep -i SHA256
 > with this key: lose it and you can never publish a verifiable update (users would have to
 > uninstall/reinstall); leak it and someone can sign malware as you.
 
+### Keeping the build reproducible
+
+F-Droid rebuilds from source and byte-compares the result to our published APK, so **the
+release APK must be built in the same way F-Droid builds it.** What we had to pin so the two
+match (all already in the repo):
+
+- **Same JDK as the F-Droid build server.** This is the subtle one. D8 emits the dex
+  annotations directory in HashMap iteration order, which changes between JDK major versions,
+  so a mismatch makes `classes*.dex` differ. `.github/workflows/release.yml` must use the
+  **same JDK major** that F-Droid uses — **not a hardcoded number**: check the F-Droid build
+  log (it runs `update-alternatives --set java …/java-<N>-openjdk/...`) and set the workflow's
+  `setup-java` `java-version` to that `<N>`. It was 21 as of 0.1.5; re-check if F-Droid bumps it.
+- **No ART baseline profile.** `app/build.gradle.kts` disables the `*ArtProfile` tasks —
+  `assets/dexopt/baseline.prof` and the profile-guided dex layout are not reproducible.
+- **Pinned R8** (`settings.gradle.kts`, `com.android.tools:r8`) and **`buildToolsVersion`**
+  (`app/build.gradle.kts`) matching what F-Droid resolves. build-tools must stay **34.0.0**:
+  apksigner from build-tools ≥ 35 produces APKs F-Droid's `apksigcopier` cannot verify
+  (fdroid #3299).
+
+To validate a fix without waiting for F-Droid's server: F-Droid's *previous* build APK (kept as
+a failed-build artifact) was made with its JDK, so building the reference the same way and
+comparing `classes2.dex` predicts the outcome:
+
+```sh
+unzip -o -q l5rcm-companion-<new>.apk classes2.dex -d new
+unzip -o -q <fdroid-build-artifact>.apk classes2.dex -d fdroid
+cmp new/classes2.dex fdroid/classes2.dex   # match ⇒ reproducible
+```
+
 ## fdroiddata `.yml` state (reference)
 
 ```yaml
