@@ -8,6 +8,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.l5rcm.companion.ui.dice.DiceScreen
 import com.l5rcm.companion.ui.imports.ImportRouter
 import com.l5rcm.companion.ui.imports.qr.QrScanScreen
 import com.l5rcm.companion.ui.library.LibraryScreen
@@ -17,6 +18,7 @@ object Routes {
     const val MAIN = "main"
     const val LIBRARY = "library"
     const val QR_SCAN = "qr_scan"
+    const val DICE = "dice"
 }
 
 /** Top-level navigation. The clan accent follows the loaded character. */
@@ -30,6 +32,7 @@ fun AppNav(viewModel: AppViewModel = hiltViewModel()) {
         // Stable lambdas to avoid recreating on each recomposition.
         val openLibrary = remember { { navController.navigate(Routes.LIBRARY); Unit } }
         val scanQr = remember { { navController.navigate(Routes.QR_SCAN); Unit } }
+        val openDice = remember { { navController.navigate(Routes.DICE); Unit } }
 
         NavHost(navController = navController, startDestination = Routes.MAIN) {
             composable(Routes.MAIN) {
@@ -38,6 +41,18 @@ fun AppNav(viewModel: AppViewModel = hiltViewModel()) {
                     viewModel = viewModel,
                     onOpenLibrary = openLibrary,
                     onScanQr = scanQr,
+                    onOpenDice = openDice,
+                )
+            }
+            composable(Routes.DICE) {
+                val view = (characterState as? CharacterUiState.Ready)?.view
+                val subtitle = view?.let {
+                    listOfNotNull(it.clanName, "Rank ${it.insightRank}", it.schoolName).joinToString(" · ")
+                }.orEmpty()
+                DiceScreen(
+                    characterName = view?.name.orEmpty(),
+                    characterSubtitle = subtitle,
+                    onBack = { navController.popBackStack() },
                 )
             }
             composable(Routes.LIBRARY) {

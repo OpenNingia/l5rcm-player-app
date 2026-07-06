@@ -52,6 +52,7 @@ fun SheetScreen(
     view: CharacterView,
     onOpenLibrary: () -> Unit,
     onImport: () -> Unit,
+    onOpenDice: () -> Unit,
 ) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -75,6 +76,7 @@ fun SheetScreen(
                         },
                     )
                 }
+                ExtraNavRow("Dice Roller", "賽") { scope.launch { drawerState.close() }; onOpenDice() }
                 ExtraNavRow("Datapack Library", "蔵") { scope.launch { drawerState.close() }; onOpenLibrary() }
                 ExtraNavRow("Import another…", "替") { scope.launch { drawerState.close() }; onImport() }
             }

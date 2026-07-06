@@ -25,31 +25,40 @@ class Roller(private val rng: DieRoller = RandomDieRoller()) {
         val pool = TenDiceRule.normalize(spec)
         val explodes = !spec.unskilled && spec.explodeOn in 1..10
 
-        val dice = ArrayList<Int>(pool.rolled)
+        // Roll every die, capturing its exploding chain in roll order.
+        val chains = ArrayList<List<Int>>(pool.rolled)
         repeat(pool.rolled) {
-            dice.add(rollDie(spec, explodes))
+            chains.add(rollDie(spec, explodes))
         }
 
-        val kept = dice.sortedDescending().take(pool.kept)
-        val total = kept.sum() + pool.bonus
-        return RollResult(dice = dice, kept = kept, bonus = pool.bonus, total = total, normalized = pool)
+        // "Keep the highest": pick the top `kept` dice by value, breaking ties by roll order so the
+        // choice is deterministic. Mark those indices kept; everything else is discarded.
+        val keptIndices = chains.indices
+            .sortedWith(compareByDescending<Int> { chains[it].sum() }.thenBy { it })
+            .take(pool.kept)
+            .toHashSet()
+
+        val results = chains.mapIndexed { i, chain -> Die(rolls = chain, kept = i in keptIndices) }
+        val total = results.filter { it.kept }.sumOf { it.value } + pool.bonus
+        return RollResult(results = results, bonus = pool.bonus, total = total, normalized = pool)
     }
 
-    /** One die: optional emphasis re-roll of a first-roll 1, then an exploding chain. */
-    private fun rollDie(spec: RollSpec, explodes: Boolean): Int {
+    /** One die: optional emphasis re-roll of a first-roll 1, then an exploding chain of raw faces. */
+    private fun rollDie(spec: RollSpec, explodes: Boolean): List<Int> {
         var face = rng.d10()
         // Emphasis: re-roll a 1 — once, on the first roll only (p. 136).
         if (spec.emphasis && face == 1) {
             face = rng.d10()
         }
-        var total = face
+        val chain = ArrayList<Int>()
+        chain.add(face)
         var guard = 0
         while (explodes && face >= spec.explodeOn) {
             face = rng.d10()
-            total += face
+            chain.add(face)
             if (++guard >= EXPLODE_GUARD) break
         }
-        return total
+        return chain
     }
 
     private companion object {

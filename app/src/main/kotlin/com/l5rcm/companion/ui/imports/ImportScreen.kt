@@ -37,6 +37,7 @@ fun ImportRouter(
     viewModel: AppViewModel,
     onOpenLibrary: () -> Unit,
     onScanQr: () -> Unit,
+    onOpenDice: () -> Unit,
 ) {
     val picker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
@@ -46,7 +47,12 @@ fun ImportRouter(
 
     when (state) {
         is CharacterUiState.Ready ->
-            SheetScreen(view = state.view, onOpenLibrary = onOpenLibrary, onImport = openPicker)
+            SheetScreen(
+                view = state.view,
+                onOpenLibrary = onOpenLibrary,
+                onImport = openPicker,
+                onOpenDice = onOpenDice,
+            )
 
         CharacterUiState.Loading -> LoadingScreen()
 

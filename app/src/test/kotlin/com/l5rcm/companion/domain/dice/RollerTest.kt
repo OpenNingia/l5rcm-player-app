@@ -1,6 +1,8 @@
 package com.l5rcm.companion.domain.dice
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class RollerTest {
@@ -69,5 +71,33 @@ class RollerTest {
         assertEquals(NormalizedPool(rolled = 10, kept = 5, bonus = 0), r.normalized)
         assertEquals(10, r.dice.size)
         assertEquals(5, r.kept.size)
+    }
+
+    @Test fun exposesExplodingChainAndKeptFlagPerDie() {
+        // 3k1: dice 10→4 (=14, kept), 6 (discarded), 2 (discarded).
+        val r = roll(RollSpec(rolled = 3, kept = 1), 10, 4, 6, 2)
+        assertEquals(3, r.results.size)
+
+        val exploded = r.results[0]
+        assertEquals(listOf(10, 4), exploded.rolls)
+        assertEquals(14, exploded.value)
+        assertTrue(exploded.exploded)
+        assertTrue(exploded.kept)
+
+        val plain = r.results[1]
+        assertEquals(listOf(6), plain.rolls)
+        assertFalse(plain.exploded)
+        assertFalse(plain.kept)
+
+        assertEquals(1, r.results.count { it.kept })
+        assertEquals(14, r.total)
+    }
+
+    @Test fun keepsExactlyKeptDiceOnTies() {
+        // Two dice tie at 7; keep only one (roll order breaks the tie deterministically).
+        val r = roll(RollSpec(rolled = 3, kept = 1), 7, 7, 3)
+        assertEquals(1, r.results.count { it.kept })
+        assertTrue(r.results[0].kept)
+        assertFalse(r.results[1].kept)
     }
 }
