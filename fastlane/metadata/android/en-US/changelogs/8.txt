@@ -1,0 +1,1 @@
+New: Roll & Keep dice roller. Roll XkY pools with exploding d10s, the Ten Dice Rule, modifiers and Raises, then read each die's result. Reachable from the character sheet and the import screen.
