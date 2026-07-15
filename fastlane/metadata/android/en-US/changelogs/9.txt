@@ -1,0 +1,1 @@
+Maintenance release: store listing polish (screenshots and feature graphic). No changes to the app itself.
