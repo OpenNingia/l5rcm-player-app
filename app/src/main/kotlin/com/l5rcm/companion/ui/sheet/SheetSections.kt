@@ -1,18 +1,41 @@
 package com.l5rcm.companion.ui.sheet
 
 import android.widget.TextView
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.text.HtmlCompat
 import com.l5rcm.companion.domain.model.CharacterView
+import com.l5rcm.companion.domain.model.WoundLevel
+import com.l5rcm.companion.domain.rules.WoundStatus
+import com.l5rcm.companion.domain.rules.woundStatus
+import com.l5rcm.companion.ui.CombatUiState
 import com.l5rcm.companion.ui.theme.L5RTheme
+import com.l5rcm.companion.ui.theme.Radii
 import com.l5rcm.companion.ui.theme.Spacing
 import com.l5rcm.companion.ui.widgets.PlainRule
 import com.l5rcm.companion.ui.widgets.PointTrack
@@ -23,10 +46,19 @@ import com.l5rcm.companion.ui.widgets.StatRow
 
 /** Renders the body for the selected [section]. */
 @Composable
-fun SectionContent(section: SheetSection, view: CharacterView) {
+fun SectionContent(
+    section: SheetSection,
+    view: CharacterView,
+    combat: CombatUiState?,
+    onDamage: (Int) -> Unit,
+    onHeal: (Int) -> Unit,
+    onRest: () -> Unit,
+    onResetWounds: () -> Unit,
+) {
     SectionHeader(section.title, section.kanji)
     when (section) {
         SheetSection.CHARACTER -> CharacterSection(view)
+        SheetSection.COMBAT -> CombatSection(view, combat, onDamage, onHeal, onRest, onResetWounds)
         SheetSection.SKILLS -> SkillsSection(view)
         SheetSection.TECHNIQUES -> TechniquesSection(view)
         SheetSection.SPELLS -> SpellsSection(view)
@@ -95,11 +127,212 @@ private fun CharacterSection(view: CharacterView) {
             val right = buildString {
                 level.threshold?.let { append("≤$it") }
                 append("  ·  ")
-                append(if (level.penalty == null) "Out" else "TN −${level.penalty}")
+                append(if (level.penalty == null) "Out" else "+${level.penalty}")
             }
             StatRow(level.name, right)
         }
     }
+}
+
+// --- Combat tab: wounds tracker (Layer B session overlay) + read-only initiative/defense ---
+
+private enum class WoundDialogKind { DAMAGE, HEAL }
+
+@Composable
+private fun CombatSection(
+    view: CharacterView,
+    combat: CombatUiState?,
+    onDamage: (Int) -> Unit,
+    onHeal: (Int) -> Unit,
+    onRest: () -> Unit,
+    onResetWounds: () -> Unit,
+) {
+    // Until the overlay flow emits, fall back to the derived baseline so the panel is never blank.
+    val current = combat?.currentWounds ?: view.health.currentWounds
+    val max = combat?.maxWounds ?: view.health.maxWounds
+    val healRate = combat?.healRate ?: view.health.healRate
+    val status = combat?.status ?: woundStatus(current, view.health.levels)
+
+    var dialog by remember { mutableStateOf<WoundDialogKind?>(null) }
+
+    SheetPanel("Wounds") {
+        WoundSummary(current, max, status)
+        PlainRule(Modifier.padding(vertical = Spacing.s3))
+
+        // Damage / heal are entered as a specific amount (from a dice roll); Rest applies the
+        // nightly heal rate; Reset drops the overlay back to the imported baseline.
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.s2)) {
+            WoundActionButton(
+                "Damage", L5RTheme.colors.accentCrimson, L5RTheme.colors.whiteWash,
+                Modifier.weight(1f),
+            ) { dialog = WoundDialogKind.DAMAGE }
+            WoundActionButton(
+                "Heal", L5RTheme.colors.success, L5RTheme.colors.whiteWash,
+                Modifier.weight(1f), enabled = current > 0,
+            ) { dialog = WoundDialogKind.HEAL }
+        }
+        Row(
+            Modifier.fillMaxWidth().padding(top = Spacing.s2),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.s2),
+        ) {
+            WoundActionButton(
+                if (healRate > 0) "Rest −$healRate" else "Rest",
+                L5RTheme.colors.paperDark, L5RTheme.colors.ink,
+                Modifier.weight(1f), enabled = current > 0,
+                onClick = onRest,
+            )
+            WoundActionButton(
+                "Reset", L5RTheme.colors.paperDark, L5RTheme.colors.inkMuted,
+                Modifier.weight(1f), enabled = current > 0,
+                onClick = onResetWounds,
+            )
+        }
+
+        PlainRule(Modifier.padding(vertical = Spacing.s3))
+        view.health.levels.forEachIndexed { i, level ->
+            WoundLevelRow(level, isCurrent = i == status.levelIndex)
+        }
+    }
+
+    SheetPanel("Initiative & Defense") {
+        StatRow("Initiative", "${view.combat.initiativeRoll}k${view.combat.initiativeKeep}")
+        StatRow("Base TN", "${view.combat.baseTn}")
+        StatRow("Full TN (armor)", "${view.combat.fullTn}")
+        StatRow("Reduction", "${view.combat.fullRd}")
+    }
+
+    dialog?.let { kind ->
+        WoundAmountDialog(
+            kind = kind,
+            onDismiss = { dialog = null },
+            onConfirm = { amount ->
+                if (kind == WoundDialogKind.DAMAGE) onDamage(amount) else onHeal(amount)
+                dialog = null
+            },
+        )
+    }
+}
+
+@Composable
+private fun WoundSummary(current: Int, max: Int, status: WoundStatus) {
+    val color = woundLevelColor(status)
+    Row(
+        Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Column {
+            Text("$current / $max", style = L5RTheme.type.statLarge.copy(color = L5RTheme.colors.ink))
+            Text("WOUNDS", style = L5RTheme.type.label.copy(color = L5RTheme.colors.inkMuted))
+        }
+        Column(horizontalAlignment = Alignment.End) {
+            Box(
+                Modifier
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(color.copy(alpha = 0.18f))
+                    .padding(horizontal = Spacing.s3, vertical = Spacing.s1),
+            ) {
+                Text(status.levelName.uppercase(), style = L5RTheme.type.label.copy(color = color))
+            }
+            Text(
+                if (status.isOut) "Incapacitated" else "penalty +${status.penalty ?: 0}",
+                style = L5RTheme.type.caption.copy(color = L5RTheme.colors.inkMuted),
+                modifier = Modifier.padding(top = Spacing.s1),
+            )
+        }
+    }
+}
+
+@Composable
+private fun woundLevelColor(status: WoundStatus): Color = when {
+    status.isOut -> L5RTheme.colors.error
+    status.levelIndex == 0 -> L5RTheme.colors.success
+    (status.penalty ?: 0) >= 15 -> L5RTheme.colors.error
+    else -> L5RTheme.colors.warning
+}
+
+@Composable
+private fun WoundLevelRow(level: WoundLevel, isCurrent: Boolean) {
+    val colors = L5RTheme.colors
+    val right = buildString {
+        level.threshold?.let { append("≤$it") }
+        append("  ·  ")
+        append(if (level.penalty == null) "Out" else "+${level.penalty}")
+    }
+    val fg = if (isCurrent) colors.ink else colors.inkMuted
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(Radii.input)
+            .background(if (isCurrent) colors.accentPrimary.copy(alpha = 0.16f) else Color.Transparent)
+            .padding(horizontal = Spacing.s2, vertical = 3.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(level.name + if (isCurrent) "  ◀" else "", style = L5RTheme.type.body.copy(color = fg))
+        Text(right, style = L5RTheme.type.body.copy(color = fg))
+    }
+}
+
+@Composable
+private fun WoundActionButton(
+    label: String,
+    bg: Color,
+    fg: Color,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) {
+    val colors = L5RTheme.colors
+    Box(
+        modifier
+            .clip(Radii.button)
+            .background(if (enabled) bg else colors.paperDark.copy(alpha = 0.4f))
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(vertical = Spacing.s3),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(label.uppercase(), style = L5RTheme.type.label.copy(color = if (enabled) fg else colors.inkFaint))
+    }
+}
+
+@Composable
+private fun WoundAmountDialog(
+    kind: WoundDialogKind,
+    onDismiss: () -> Unit,
+    onConfirm: (Int) -> Unit,
+) {
+    var text by remember { mutableStateOf("") }
+    val amount = text.toIntOrNull()
+    val valid = amount != null && amount > 0
+    val damage = kind == WoundDialogKind.DAMAGE
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = L5RTheme.colors.paper,
+        title = {
+            Text(
+                if (damage) "Apply damage" else "Heal wounds",
+                style = L5RTheme.type.heading2.copy(color = L5RTheme.colors.ink),
+            )
+        },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { new -> text = new.filter { it.isDigit() }.take(3) },
+                singleLine = true,
+                label = { Text(if (damage) "Wounds taken" else "Wounds healed") },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Done,
+                ),
+            )
+        },
+        confirmButton = {
+            TextButton(enabled = valid, onClick = { amount?.let(onConfirm) }) {
+                Text((if (damage) "Damage" else "Heal").uppercase())
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("CANCEL") } },
+    )
 }
 
 @Composable

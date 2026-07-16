@@ -37,12 +37,16 @@ Today the app tracks a **single** last-opened character (`AppPreferences` stores
 track this *without ever writing back* to the `.l5r`. All of the below is a local overlay, keyed
 per character, resettable to the derived baseline.
 
-- 🔜 **Room-backed session overlay** — the persistence layer for everything in this theme; never
-  mutates the imported save.
-- 🔜 **Wounds tracker** — mark damage against the wound ranks and surface the current TN penalty
-  (Healthy 0 · Nicked +3 · Grazed +5 · Hurt +10 · Injured +15 · Crippled +20 · Down +40 · Out).
-  Capacity = Earth×5 then Earth× the campaign multiplier (x2 default); rest-heal = 2×Stamina +
-  Insight Rank per night.
+- 🔨 **Room-backed session overlay** — the persistence layer for everything in this theme; never
+  mutates the imported save. Landed with the wounds tracker: `data/session` (`SessionState` entity
+  keyed per character `uuid`, DAO, `SessionDatabase`, `SessionRepository`), merged onto the derived
+  baseline in `AppViewModel`. A missing row means "no overlay yet" → the baseline applies.
+- ✅ **Wounds tracker** — in the new **Combat** tab: apply a specific damage/heal amount (native
+  number entry, not a stepper), Rest (nightly heal rate), Reset (to baseline). Surfaces the current
+  wound level + penalty (Healthy 0 · Nicked +3 · Grazed +5 · Hurt +10 · Injured +15 · Crippled +20 ·
+  Down +40 · Out) via the pure `woundStatus()` (Layer B — no desktop oracle; RAW boundary = a rank
+  holds until wounds *exceed* its capacity). Capacity = Earth×5 then Earth× the campaign multiplier
+  (x2 default); rest-heal = 2×Stamina + Insight Rank per night.
 - 🔜 **Void points** — spend/regain against the pool (= Void Ring); one spend per round; refreshes on
   daily rest.
 - 🔜 **Spell slots** — per-element counters (= element Ring) plus the Void-Ring bonus slots; a failed

@@ -1,6 +1,7 @@
 package com.l5rcm.companion.di
 
 import android.content.Context
+import androidx.room.Room
 import com.l5rcm.companion.data.catalog.DatapackCatalog
 import com.l5rcm.companion.data.datapack.AndroidXmlParserFactory
 import com.l5rcm.companion.data.datapack.DatapackParser
@@ -8,6 +9,9 @@ import com.l5rcm.companion.data.datapack.XmlParserFactory
 import com.l5rcm.companion.data.repository.AppPreferences
 import com.l5rcm.companion.data.repository.CharacterRepository
 import com.l5rcm.companion.data.repository.DatapackRepository
+import com.l5rcm.companion.data.session.SessionDatabase
+import com.l5rcm.companion.data.session.SessionRepository
+import com.l5rcm.companion.data.session.SessionStateDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -69,4 +73,17 @@ object AppModule {
         @ApplicationContext context: Context,
         prefs: AppPreferences,
     ): CharacterRepository = CharacterRepository(context, prefs)
+
+    @Provides
+    @Singleton
+    fun provideSessionDatabase(@ApplicationContext context: Context): SessionDatabase =
+        Room.databaseBuilder(context, SessionDatabase::class.java, "session.db").build()
+
+    @Provides
+    @Singleton
+    fun provideSessionStateDao(db: SessionDatabase): SessionStateDao = db.sessionStateDao()
+
+    @Provides
+    @Singleton
+    fun provideSessionRepository(dao: SessionStateDao): SessionRepository = SessionRepository(dao)
 }
