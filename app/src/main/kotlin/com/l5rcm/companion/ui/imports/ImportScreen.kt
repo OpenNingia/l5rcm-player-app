@@ -17,10 +17,12 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.l5rcm.companion.ui.AppViewModel
 import com.l5rcm.companion.ui.CharacterUiState
 import com.l5rcm.companion.ui.sheet.SheetScreen
@@ -46,13 +48,20 @@ fun ImportRouter(
     val openPicker = { picker.launch(arrayOf("application/json", "application/octet-stream", "*/*")) }
 
     when (state) {
-        is CharacterUiState.Ready ->
+        is CharacterUiState.Ready -> {
+            val combat by viewModel.combat.collectAsStateWithLifecycle()
             SheetScreen(
                 view = state.view,
+                combat = combat,
+                onDamage = viewModel::applyDamage,
+                onHeal = viewModel::applyHeal,
+                onRest = viewModel::rest,
+                onResetWounds = viewModel::resetWounds,
                 onOpenLibrary = onOpenLibrary,
                 onImport = openPicker,
                 onOpenDice = onOpenDice,
             )
+        }
 
         CharacterUiState.Loading -> LoadingScreen()
 

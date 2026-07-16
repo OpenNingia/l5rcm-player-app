@@ -36,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.l5rcm.companion.domain.model.CharacterView
+import com.l5rcm.companion.ui.CombatUiState
 import com.l5rcm.companion.ui.theme.L5RTheme
 import com.l5rcm.companion.ui.theme.Layout
 import com.l5rcm.companion.ui.theme.Spacing
@@ -50,6 +51,11 @@ import kotlinx.coroutines.launch
 @Composable
 fun SheetScreen(
     view: CharacterView,
+    combat: CombatUiState?,
+    onDamage: (Int) -> Unit,
+    onHeal: (Int) -> Unit,
+    onRest: () -> Unit,
+    onResetWounds: () -> Unit,
     onOpenLibrary: () -> Unit,
     onImport: () -> Unit,
     onOpenDice: () -> Unit,
@@ -96,7 +102,15 @@ fun SheetScreen(
                         .padding(horizontal = Spacing.s5, vertical = Spacing.s5),
                     verticalArrangement = Arrangement.spacedBy(Spacing.s4),
                 ) {
-                    SectionContent(section, view)
+                    SectionContent(
+                        section = section,
+                        view = view,
+                        combat = combat,
+                        onDamage = onDamage,
+                        onHeal = onHeal,
+                        onRest = onRest,
+                        onResetWounds = onResetWounds,
+                    )
                 }
             }
         }

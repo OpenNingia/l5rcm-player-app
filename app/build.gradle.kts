@@ -131,6 +131,12 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.androidx.datastore.preferences)
 
+    // Room-backed session overlay (wounds/Void/… play-time state, keyed per character;
+    // never writes back to the .l5r). Apache-2.0 — FOSS-friendly for the F-Droid build.
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+
     // QR import: CameraX preview/analysis is shared; the QR decoder is flavor-specific
     // (see src/floss and src/full implementations of qrFrameAnalyzer).
     implementation(libs.androidx.camera.core)
