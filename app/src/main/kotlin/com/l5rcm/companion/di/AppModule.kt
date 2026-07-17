@@ -77,7 +77,9 @@ object AppModule {
     @Provides
     @Singleton
     fun provideSessionDatabase(@ApplicationContext context: Context): SessionDatabase =
-        Room.databaseBuilder(context, SessionDatabase::class.java, "session.db").build()
+        Room.databaseBuilder(context, SessionDatabase::class.java, "session.db")
+            .addMigrations(SessionDatabase.MIGRATION_1_2)
+            .build()
 
     @Provides
     @Singleton

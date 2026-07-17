@@ -13,6 +13,7 @@ import com.l5rcm.companion.data.save.RankAdv
 import com.l5rcm.companion.data.save.SaveModel
 import com.l5rcm.companion.data.save.SkillAdv
 import com.l5rcm.companion.data.save.VoidAdv
+import com.l5rcm.companion.data.save.WeaponOutfit
 import com.l5rcm.companion.domain.model.Ring
 import com.l5rcm.companion.domain.model.Trait
 import org.junit.Assert.assertEquals
@@ -52,6 +53,11 @@ class CharacterDeriverTest {
             VoidAdv(cost = 6),
             PerkAdv(perk = "wealthy", tag = "merit", cost = 3),
             PerkAdv(perk = "brash", tag = "flaw", cost = -2),
+        ),
+        weapons = listOf(
+            // trait "water" here is deliberately a ring, not a trait: the skill's own trait
+            // (Kenjutsu → Agility) must win when building the attack pool.
+            WeaponOutfit(name = "Katana", dr = "3k2", skill_id = "kenjutsu", skill_nm = "Kenjutsu", trait = "water"),
         ),
     )
 
@@ -131,6 +137,18 @@ class CharacterDeriverTest {
         val reflexes = v.traits.first { it.trait == Trait.REFLEXES }
         assertEquals(4, reflexes.rank)
         assertEquals(3, reflexes.modifiedRank) // -1 from weak_reflexes
+    }
+
+    @Test
+    fun derivesWeaponAttackAndDamagePools() {
+        val v = CharacterDeriver.derive(sampleSave(), datapacks())
+        val katana = v.weapons.single()
+        // Attack = (Agility 2 + Kenjutsu 2) k Agility 2 = 4k2 (skill's Trait beats the weapon's).
+        assertEquals(4, katana.attackRolled)
+        assertEquals(2, katana.attackKept)
+        // Damage parsed straight from dr "3k2".
+        assertEquals(3, katana.damageRolled)
+        assertEquals(2, katana.damageKept)
     }
 
     @Test

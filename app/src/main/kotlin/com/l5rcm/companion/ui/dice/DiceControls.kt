@@ -142,8 +142,14 @@ fun ToggleBar(
     onClick: () -> Unit,
     activeBg: Color,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     val colors = L5RTheme.colors
+    val fg = when {
+        active -> colors.paperLight
+        enabled -> colors.inkMuted
+        else -> colors.disabledText
+    }
     Box(
         modifier
             .fillMaxWidth()
@@ -151,12 +157,9 @@ fun ToggleBar(
             .clip(Radii.button)
             .background(if (active) activeBg else colors.whiteWash)
             .border(1.dp, if (active) activeBg else colors.parchmentBorder, Radii.button)
-            .clickable(onClick = onClick),
+            .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            label.uppercase(),
-            style = DiceType.button.copy(color = if (active) colors.paperLight else colors.inkMuted),
-        )
+        Text(label.uppercase(), style = DiceType.button.copy(color = fg))
     }
 }

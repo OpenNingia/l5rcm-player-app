@@ -99,3 +99,17 @@ fun notation(rolled: Int, kept: Int, bonus: Int): String {
         else -> base
     }
 }
+
+private val NOTATION_REGEX = Regex("""^\s*(\d+)\s*[kK]\s*(\d+)""")
+
+/**
+ * Parse the rolled/kept dice out of Roll & Keep notation such as `"3k2"` or `"10k5+3"` (the bonus,
+ * if any, is ignored — callers add their own). Returns null for blank or non-`XkY` strings so the
+ * weapon deriver can fall back gracefully. Used to turn a save's `dr` / `base_atk` into a pool.
+ */
+fun parseNotation(text: String): Pair<Int, Int>? {
+    val m = NOTATION_REGEX.find(text) ?: return null
+    val rolled = m.groupValues[1].toIntOrNull() ?: return null
+    val kept = m.groupValues[2].toIntOrNull() ?: return null
+    return rolled to kept
+}

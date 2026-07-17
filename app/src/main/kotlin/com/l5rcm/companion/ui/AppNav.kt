@@ -9,6 +9,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.l5rcm.companion.ui.dice.DiceScreen
+import com.l5rcm.companion.ui.dice.DicePreset
 import com.l5rcm.companion.ui.imports.ImportRouter
 import com.l5rcm.companion.ui.imports.qr.QrScanScreen
 import com.l5rcm.companion.ui.library.LibraryScreen
@@ -33,6 +34,10 @@ fun AppNav(viewModel: AppViewModel = hiltViewModel()) {
         val openLibrary = remember { { navController.navigate(Routes.LIBRARY); Unit } }
         val scanQr = remember { { navController.navigate(Routes.QR_SCAN); Unit } }
         val openDice = remember { { navController.navigate(Routes.DICE); Unit } }
+        // A Combat-tab roll: stash the pre-filled config, then open the shared dice screen.
+        val combatRoll = remember {
+            { preset: DicePreset -> viewModel.prepareRoll(preset); navController.navigate(Routes.DICE) }
+        }
 
         NavHost(navController = navController, startDestination = Routes.MAIN) {
             composable(Routes.MAIN) {
@@ -42,6 +47,7 @@ fun AppNav(viewModel: AppViewModel = hiltViewModel()) {
                     onOpenLibrary = openLibrary,
                     onScanQr = scanQr,
                     onOpenDice = openDice,
+                    onCombatRoll = combatRoll,
                 )
             }
             composable(Routes.DICE) {
@@ -49,10 +55,17 @@ fun AppNav(viewModel: AppViewModel = hiltViewModel()) {
                 val subtitle = view?.let {
                     listOfNotNull(it.clanName, "Rank ${it.insightRank}", it.schoolName).joinToString(" · ")
                 }.orEmpty()
+                val preset by viewModel.pendingDice.collectAsStateWithLifecycle()
+                val combat by viewModel.combat.collectAsStateWithLifecycle()
                 DiceScreen(
                     characterName = view?.name.orEmpty(),
                     characterSubtitle = subtitle,
                     onBack = { navController.popBackStack() },
+                    preset = preset,
+                    onPresetConsumed = viewModel::consumePendingDice,
+                    // Only context rolls (driven by a preset) tie the Void toggle to the tracker.
+                    voidAvailable = if (preset != null) combat?.voidCurrent else null,
+                    onVoidSpent = viewModel::spendVoid,
                 )
             }
             composable(Routes.LIBRARY) {

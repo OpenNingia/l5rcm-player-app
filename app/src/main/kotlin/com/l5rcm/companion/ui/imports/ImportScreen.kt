@@ -40,6 +40,7 @@ fun ImportRouter(
     onOpenLibrary: () -> Unit,
     onScanQr: () -> Unit,
     onOpenDice: () -> Unit,
+    onCombatRoll: (com.l5rcm.companion.ui.dice.DicePreset) -> Unit,
 ) {
     val picker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
@@ -57,6 +58,12 @@ fun ImportRouter(
                 onHeal = viewModel::applyHeal,
                 onRest = viewModel::rest,
                 onResetWounds = viewModel::resetWounds,
+                onSetStance = viewModel::setStance,
+                onSpendVoid = viewModel::spendVoid,
+                onRegainVoid = viewModel::regainVoid,
+                onEquipWeapon = viewModel::equipWeapon,
+                onSetFullDefenseTotal = viewModel::setFullDefenseTotal,
+                onCombatRoll = onCombatRoll,
                 onOpenLibrary = onOpenLibrary,
                 onImport = openPicker,
                 onOpenDice = onOpenDice,

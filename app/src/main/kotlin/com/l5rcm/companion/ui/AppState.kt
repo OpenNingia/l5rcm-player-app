@@ -4,6 +4,7 @@ import com.l5rcm.companion.data.catalog.CatalogEntry
 import com.l5rcm.companion.data.save.PackRef
 import com.l5rcm.companion.data.repository.InstalledPack
 import com.l5rcm.companion.domain.model.CharacterView
+import com.l5rcm.companion.domain.rules.Stance
 import com.l5rcm.companion.domain.rules.WoundStatus
 
 /** State of the imported character / sheet. */
@@ -27,6 +28,15 @@ data class CombatUiState(
     val maxWounds: Int,
     val healRate: Int,
     val status: WoundStatus,
+    /** Void Points currently available (Void Ring − spent) and the maximum pool. */
+    val voidCurrent: Int,
+    val voidMax: Int,
+    /** The chosen combat stance (defaults to [Stance.ATTACK]). */
+    val stance: Stance,
+    /** Name of the equipped weapon, or null when none is equipped. */
+    val equippedWeaponName: String?,
+    /** Captured Defense/Reflexes roll total feeding the Full Defense Armor TN bonus; null until rolled. */
+    val fullDefenseTotal: Int?,
 )
 
 /** State of the datapack Library (catalog + installed registry). */

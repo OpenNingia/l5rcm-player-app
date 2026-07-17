@@ -30,13 +30,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.l5rcm.companion.domain.model.CharacterView
+import com.l5rcm.companion.domain.rules.Stance
 import com.l5rcm.companion.ui.CombatUiState
+import com.l5rcm.companion.ui.dice.DicePreset
 import com.l5rcm.companion.ui.theme.L5RTheme
 import com.l5rcm.companion.ui.theme.Layout
 import com.l5rcm.companion.ui.theme.Spacing
@@ -56,13 +59,20 @@ fun SheetScreen(
     onHeal: (Int) -> Unit,
     onRest: () -> Unit,
     onResetWounds: () -> Unit,
+    onSetStance: (Stance) -> Unit,
+    onSpendVoid: () -> Unit,
+    onRegainVoid: () -> Unit,
+    onEquipWeapon: (String?) -> Unit,
+    onSetFullDefenseTotal: (Int) -> Unit,
+    onCombatRoll: (DicePreset) -> Unit,
     onOpenLibrary: () -> Unit,
     onImport: () -> Unit,
     onOpenDice: () -> Unit,
 ) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    var section by remember { mutableStateOf(SheetSection.CHARACTER) }
+    // rememberSaveable so the selected tab survives navigating out to the dice roller / library and back.
+    var section by rememberSaveable { mutableStateOf(SheetSection.CHARACTER) }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -110,6 +120,12 @@ fun SheetScreen(
                         onHeal = onHeal,
                         onRest = onRest,
                         onResetWounds = onResetWounds,
+                        onSetStance = onSetStance,
+                        onSpendVoid = onSpendVoid,
+                        onRegainVoid = onRegainVoid,
+                        onEquipWeapon = onEquipWeapon,
+                        onSetFullDefenseTotal = onSetFullDefenseTotal,
+                        onCombatRoll = onCombatRoll,
                     )
                 }
             }

@@ -350,14 +350,35 @@ object CharacterDeriver {
         }
 
         private fun buildWeapons(): List<WeaponView> = save.weapons.map { w ->
-            val skillName = w.skill_nm.ifEmpty { packs.skill(w.skill_id)?.name.orEmpty() }
+            val skillDef = w.skill_id?.let { packs.skill(it) }
+            val skillName = w.skill_nm.ifEmpty { skillDef?.name.orEmpty() }
+
+            // Attack pool = (Trait + skill rank) k Trait — the standard skill roll for the weapon.
+            // Prefer the skill's associated Trait; fall back to the weapon's own trait id, then to
+            // any base_atk notation the desktop pre-computed, then to an empty (0k0) pool.
+            val attackTrait = Trait.byId(skillDef?.trait ?: "") ?: Trait.byId(w.trait)
+            val (atkRolled, atkKept) = when {
+                attackTrait != null -> {
+                    val t = traitRank(attackTrait)
+                    (t + w.skill_id?.let { skillRank(it) }.orZero()) to t
+                }
+                else -> com.l5rcm.companion.domain.dice.parseNotation(w.base_atk) ?: (0 to 0)
+            }
+            val (dmgRolled, dmgKept) = com.l5rcm.companion.domain.dice.parseNotation(w.dr) ?: (0 to 0)
+
             WeaponView(
                 name = w.name,
                 skillName = skillName,
                 damageRoll = w.dr,
                 range = w.range,
                 tags = w.tags,
+                attackRolled = atkRolled,
+                attackKept = atkKept,
+                damageRolled = dmgRolled,
+                damageKept = dmgKept,
             )
         }
+
+        private fun Int?.orZero(): Int = this ?: 0
     }
 }
