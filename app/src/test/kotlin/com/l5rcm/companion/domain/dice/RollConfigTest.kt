@@ -79,4 +79,16 @@ class RollConfigTest {
         assertEquals("5k2-3", notation(5, 2, -3))
         assertEquals("7k4+5", RollConfig(rolled = 7, kept = 4, bonus = 5).effective().notation)
     }
+
+    @Test fun parseNotationReadsRolledAndKept() {
+        assertEquals(3 to 2, parseNotation("3k2"))
+        assertEquals(10 to 5, parseNotation("10k5+3")) // bonus ignored
+        assertEquals(4 to 2, parseNotation(" 4K2 "))   // tolerant of case + surrounding space
+    }
+
+    @Test fun parseNotationRejectsJunk() {
+        assertEquals(null, parseNotation(""))
+        assertEquals(null, parseNotation("N/A"))
+        assertEquals(null, parseNotation("k3"))
+    }
 }

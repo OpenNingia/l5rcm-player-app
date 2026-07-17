@@ -2,12 +2,14 @@ package com.l5rcm.companion.ui.sheet
 
 import android.widget.TextView
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
@@ -29,11 +31,20 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.text.HtmlCompat
+import com.l5rcm.companion.domain.dice.RollConfig
+import com.l5rcm.companion.domain.dice.RollMode
+import com.l5rcm.companion.domain.dice.RollType
 import com.l5rcm.companion.domain.model.CharacterView
+import com.l5rcm.companion.domain.model.Ring
+import com.l5rcm.companion.domain.model.Trait
+import com.l5rcm.companion.domain.model.WeaponView
 import com.l5rcm.companion.domain.model.WoundLevel
+import com.l5rcm.companion.domain.rules.Stance
+import com.l5rcm.companion.domain.rules.StanceRules
 import com.l5rcm.companion.domain.rules.WoundStatus
 import com.l5rcm.companion.domain.rules.woundStatus
 import com.l5rcm.companion.ui.CombatUiState
+import com.l5rcm.companion.ui.dice.DicePreset
 import com.l5rcm.companion.ui.theme.L5RTheme
 import com.l5rcm.companion.ui.theme.Radii
 import com.l5rcm.companion.ui.theme.Spacing
@@ -54,17 +65,26 @@ fun SectionContent(
     onHeal: (Int) -> Unit,
     onRest: () -> Unit,
     onResetWounds: () -> Unit,
+    onSetStance: (Stance) -> Unit,
+    onSpendVoid: () -> Unit,
+    onRegainVoid: () -> Unit,
+    onEquipWeapon: (String?) -> Unit,
+    onSetFullDefenseTotal: (Int) -> Unit,
+    onCombatRoll: (DicePreset) -> Unit,
 ) {
     SectionHeader(section.title, section.kanji)
     when (section) {
         SheetSection.CHARACTER -> CharacterSection(view)
-        SheetSection.COMBAT -> CombatSection(view, combat, onDamage, onHeal, onRest, onResetWounds)
+        SheetSection.COMBAT -> CombatSection(
+            view, combat, onDamage, onHeal, onRest, onResetWounds,
+            onSetStance, onSpendVoid, onRegainVoid, onSetFullDefenseTotal, onCombatRoll,
+        )
         SheetSection.SKILLS -> SkillsSection(view)
         SheetSection.TECHNIQUES -> TechniquesSection(view)
         SheetSection.SPELLS -> SpellsSection(view)
         SheetSection.KATA_KIHO -> KataKihoSection(view)
         SheetSection.MERITS -> MeritsSection(view)
-        SheetSection.EQUIPMENT -> EquipmentSection(view)
+        SheetSection.EQUIPMENT -> EquipmentSection(view, combat?.equippedWeaponName, onEquipWeapon)
         SheetSection.MODIFIERS -> ModifiersSection(view)
         SheetSection.NOTES -> NotesSection(view)
         SheetSection.ABOUT -> AboutSection(view)
@@ -134,7 +154,7 @@ private fun CharacterSection(view: CharacterView) {
     }
 }
 
-// --- Combat tab: wounds tracker (Layer B session overlay) + read-only initiative/defense ---
+// --- Combat tab: session overlay (wounds · Void · stance · equipped weapon) + dice presets ---
 
 private enum class WoundDialogKind { DAMAGE, HEAL }
 
@@ -146,21 +166,40 @@ private fun CombatSection(
     onHeal: (Int) -> Unit,
     onRest: () -> Unit,
     onResetWounds: () -> Unit,
+    onSetStance: (Stance) -> Unit,
+    onSpendVoid: () -> Unit,
+    onRegainVoid: () -> Unit,
+    onSetFullDefenseTotal: (Int) -> Unit,
+    onCombatRoll: (DicePreset) -> Unit,
 ) {
-    // Until the overlay flow emits, fall back to the derived baseline so the panel is never blank.
+    // Until the overlay flow emits, fall back to the derived baseline so panels are never blank.
     val current = combat?.currentWounds ?: view.health.currentWounds
     val max = combat?.maxWounds ?: view.health.maxWounds
     val healRate = combat?.healRate ?: view.health.healRate
     val status = combat?.status ?: woundStatus(current, view.health.levels)
 
+    val stance = combat?.stance ?: Stance.ATTACK
+    val voidCurrent = combat?.voidCurrent ?: view.voidRank
+    val voidMax = combat?.voidMax ?: view.voidRank
+    val fullDefenseTotal = combat?.fullDefenseTotal
+
+    // Stance-relevant derived numbers, all read from the character view.
+    val airRank = view.rings.firstOrNull { it.ring == Ring.AIR }?.rank ?: 0
+    val reflexes = view.traits.firstOrNull { it.trait == Trait.REFLEXES }?.modifiedRank ?: 0
+    val defenseRank = view.skills
+        .firstOrNull { it.id == "defense" || it.name.equals("Defense", ignoreCase = true) }?.rank ?: 0
+    val armorTnDelta = StanceRules.armorTnDelta(stance, airRank, defenseRank, fullDefenseTotal)
+    val effectiveArmorTn = view.combat.fullTn + armorTnDelta
+
     var dialog by remember { mutableStateOf<WoundDialogKind?>(null) }
+    var fullDefenseDialog by remember { mutableStateOf(false) }
 
     SheetPanel("Wounds") {
         WoundSummary(current, max, status)
         PlainRule(Modifier.padding(vertical = Spacing.s3))
 
         // Damage / heal are entered as a specific amount (from a dice roll); Rest applies the
-        // nightly heal rate; Reset drops the overlay back to the imported baseline.
+        // nightly heal rate (and refreshes Void); Reset drops wounds back to the imported baseline.
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.s2)) {
             WoundActionButton(
                 "Damage", L5RTheme.colors.accentCrimson, L5RTheme.colors.whiteWash,
@@ -178,7 +217,7 @@ private fun CombatSection(
             WoundActionButton(
                 if (healRate > 0) "Rest −$healRate" else "Rest",
                 L5RTheme.colors.paperDark, L5RTheme.colors.ink,
-                Modifier.weight(1f), enabled = current > 0,
+                Modifier.weight(1f), enabled = current > 0 || voidCurrent < voidMax,
                 onClick = onRest,
             )
             WoundActionButton(
@@ -194,11 +233,86 @@ private fun CombatSection(
         }
     }
 
+    VoidPanel(voidCurrent, voidMax, onSpendVoid, onRegainVoid)
+
+    StancePanel(
+        stance = stance,
+        defenseRank = defenseRank,
+        baseArmorTn = view.combat.fullTn,
+        effectiveArmorTn = effectiveArmorTn,
+        fullDefenseTotal = fullDefenseTotal,
+        onSetStance = onSetStance,
+        onRollFullDefense = {
+            onCombatRoll(
+                DicePreset(
+                    RollConfig(
+                        mode = RollMode.OPEN,
+                        rollType = RollType.SKILL,
+                        skilled = defenseRank >= 1,
+                        rolled = (defenseRank + reflexes).coerceAtLeast(1),
+                        kept = reflexes.coerceAtLeast(1),
+                    ),
+                    "Difesa Totale — Difesa/Reflessi",
+                ),
+            )
+        },
+        onEnterFullDefenseTotal = { fullDefenseDialog = true },
+    )
+
+    EquippedWeaponPanel(
+        weapon = view.weapons.firstOrNull { it.name == combat?.equippedWeaponName },
+        stance = stance,
+        onRollAttack = { w ->
+            val (bonusRolled, bonusKept) = StanceRules.attackPoolBonus(stance)
+            onCombatRoll(
+                DicePreset(
+                    RollConfig(
+                        mode = RollMode.OPEN,
+                        rollType = RollType.SKILL,
+                        skilled = true,
+                        rolled = w.attackRolled + bonusRolled,
+                        kept = w.attackKept + bonusKept,
+                    ),
+                    "Attacco — ${w.name}",
+                ),
+            )
+        },
+        onRollDamage = { w ->
+            onCombatRoll(
+                DicePreset(
+                    RollConfig(
+                        mode = RollMode.OPEN,
+                        rollType = RollType.TRAIT, // damage explodes and takes no Raises
+                        rolled = w.damageRolled,
+                        kept = w.damageKept,
+                    ),
+                    "Danno — ${w.name}",
+                ),
+            )
+        },
+    )
+
     SheetPanel("Initiative & Defense") {
         StatRow("Initiative", "${view.combat.initiativeRoll}k${view.combat.initiativeKeep}")
         StatRow("Base TN", "${view.combat.baseTn}")
-        StatRow("Full TN (armor)", "${view.combat.fullTn}")
+        StatRow("Armor TN (stance)", "$effectiveArmorTn")
         StatRow("Reduction", "${view.combat.fullRd}")
+        WoundActionButton(
+            "Roll initiative", L5RTheme.colors.accentBlue, L5RTheme.colors.whiteWash,
+            Modifier.fillMaxWidth().padding(top = Spacing.s3),
+        ) {
+            onCombatRoll(
+                DicePreset(
+                    RollConfig(
+                        mode = RollMode.OPEN,
+                        rollType = RollType.TRAIT,
+                        rolled = view.combat.initiativeRoll,
+                        kept = view.combat.initiativeKeep,
+                    ),
+                    "Iniziativa",
+                ),
+            )
+        }
     }
 
     dialog?.let { kind ->
@@ -211,6 +325,227 @@ private fun CombatSection(
             },
         )
     }
+
+    if (fullDefenseDialog) {
+        NumberEntryDialog(
+            title = "Full Defense",
+            label = "Total rolled (Defense/Reflexes)",
+            confirmLabel = "Set",
+            onDismiss = { fullDefenseDialog = false },
+            onConfirm = { total ->
+                onSetFullDefenseTotal(total)
+                fullDefenseDialog = false
+            },
+        )
+    }
+}
+
+// --- Void points: a tappable pip track (tap a filled pip to spend, an empty pip to regain) ---
+
+@Composable
+private fun VoidPanel(current: Int, max: Int, onSpend: () -> Unit, onRegain: () -> Unit) {
+    SheetPanel("Void Points") {
+        if (max <= 0) {
+            EmptyNoteInline("No Void Ring — no Void Points to spend.")
+            return@SheetPanel
+        }
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text("$current / $max", style = L5RTheme.type.statLarge.copy(color = L5RTheme.colors.ink))
+            Text("VOID", style = L5RTheme.type.label.copy(color = L5RTheme.colors.ringVoid))
+        }
+        Row(
+            Modifier.fillMaxWidth().padding(top = Spacing.s2),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.s2),
+        ) {
+            for (i in 1..max) {
+                VoidPip(filled = i <= current, onClick = { if (i <= current) onSpend() else onRegain() })
+            }
+        }
+        Text(
+            "Tap a filled point to spend, an empty one to regain. Rest refreshes to full.",
+            style = L5RTheme.type.caption.copy(color = L5RTheme.colors.inkMuted),
+            modifier = Modifier.padding(top = Spacing.s2),
+        )
+    }
+}
+
+@Composable
+private fun VoidPip(filled: Boolean, onClick: () -> Unit) {
+    val color = L5RTheme.colors.ringVoid
+    Box(
+        Modifier
+            .size(28.dp)
+            .clip(RoundedCornerShape(50))
+            .background(if (filled) color else Color.Transparent)
+            .then(if (filled) Modifier else Modifier.border(1.5.dp, color, RoundedCornerShape(50)))
+            .clickable(onClick = onClick),
+    )
+}
+
+// --- Stance selector + live Armor TN ---
+
+@Composable
+private fun StancePanel(
+    stance: Stance,
+    defenseRank: Int,
+    baseArmorTn: Int,
+    effectiveArmorTn: Int,
+    fullDefenseTotal: Int?,
+    onSetStance: (Stance) -> Unit,
+    onRollFullDefense: () -> Unit,
+    onEnterFullDefenseTotal: () -> Unit,
+) {
+    val colors = L5RTheme.colors
+    SheetPanel("Stance") {
+        Stance.entries.forEach { s ->
+            val enabled = StanceRules.canUse(s, defenseRank)
+            StanceRow(s, selected = s == stance, enabled = enabled) { if (enabled) onSetStance(s) }
+        }
+        if (defenseRank < 1) {
+            Text(
+                "Defensive stances need at least rank 1 in Defense.",
+                style = L5RTheme.type.captionItalic.copy(color = colors.inkFaint),
+                modifier = Modifier.padding(top = Spacing.s1),
+            )
+        }
+        PlainRule(Modifier.padding(vertical = Spacing.s3))
+        Text(stance.effects, style = L5RTheme.type.body.copy(color = colors.inkMuted))
+        StatRow("Armor TN", "$effectiveArmorTn" + if (effectiveArmorTn != baseArmorTn) "  (base $baseArmorTn)" else "")
+
+        if (stance == Stance.FULL_DEFENSE) {
+            Row(
+                Modifier.fillMaxWidth().padding(top = Spacing.s2),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.s2),
+            ) {
+                WoundActionButton(
+                    "Roll defense", colors.accentBlue, colors.whiteWash, Modifier.weight(1f),
+                    onClick = onRollFullDefense,
+                )
+                WoundActionButton(
+                    if (fullDefenseTotal != null) "Total: $fullDefenseTotal" else "Enter total",
+                    colors.paperDark, colors.ink, Modifier.weight(1f),
+                    onClick = onEnterFullDefenseTotal,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StanceRow(stance: Stance, selected: Boolean, enabled: Boolean, onClick: () -> Unit) {
+    val colors = L5RTheme.colors
+    val fg = when {
+        !enabled -> colors.inkFaint
+        selected -> colors.accentCrimson
+        else -> colors.ink
+    }
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(Radii.input)
+            .background(if (selected) colors.accentPrimary.copy(alpha = 0.16f) else Color.Transparent)
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = Spacing.s2, vertical = Spacing.s2),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(stance.displayName, style = L5RTheme.type.body.copy(color = fg))
+        if (selected) Text("◀", style = L5RTheme.type.body.copy(color = colors.accentCrimson))
+    }
+}
+
+// --- Equipped weapon: attack + damage rolls ---
+
+@Composable
+private fun EquippedWeaponPanel(
+    weapon: WeaponView?,
+    stance: Stance,
+    onRollAttack: (WeaponView) -> Unit,
+    onRollDamage: (WeaponView) -> Unit,
+) {
+    val colors = L5RTheme.colors
+    SheetPanel("Equipped Weapon") {
+        if (weapon == null) {
+            EmptyNoteInline("Equip a weapon from the Equipment section to roll attacks here.")
+            return@SheetPanel
+        }
+        Text(weapon.name, style = L5RTheme.type.heading2.copy(color = colors.ink))
+        val sub = listOfNotNull(
+            weapon.skillName.takeIf { it.isNotBlank() },
+            weapon.range.takeIf { it.isNotBlank() },
+        ).joinToString("  ·  ")
+        if (sub.isNotBlank()) {
+            Text(sub, style = L5RTheme.type.caption.copy(color = colors.inkMuted))
+        }
+        val bonus = StanceRules.attackPoolBonus(stance)
+        StatRow(
+            "Attack",
+            if (weapon.hasAttack) {
+                "${weapon.attackRolled + bonus.first}k${weapon.attackKept + bonus.second}" +
+                    if (bonus.first > 0) "  (stance)" else ""
+            } else "—",
+        )
+        StatRow("Damage", weapon.damageRoll.ifBlank { "—" })
+        Row(
+            Modifier.fillMaxWidth().padding(top = Spacing.s3),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.s2),
+        ) {
+            WoundActionButton(
+                "Attack", colors.accentCrimson, colors.whiteWash, Modifier.weight(1f),
+                enabled = weapon.hasAttack, onClick = { onRollAttack(weapon) },
+            )
+            WoundActionButton(
+                "Damage", colors.accentGold, colors.ink, Modifier.weight(1f),
+                enabled = weapon.hasDamage, onClick = { onRollDamage(weapon) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun EmptyNoteInline(text: String) {
+    Text(text, style = L5RTheme.type.body.copy(color = L5RTheme.colors.inkMuted))
+}
+
+/** A single-field positive-integer entry dialog (Full Defense total). Mirrors [WoundAmountDialog]. */
+@Composable
+private fun NumberEntryDialog(
+    title: String,
+    label: String,
+    confirmLabel: String,
+    onDismiss: () -> Unit,
+    onConfirm: (Int) -> Unit,
+) {
+    var text by remember { mutableStateOf("") }
+    val amount = text.toIntOrNull()
+    val valid = amount != null && amount >= 0
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = L5RTheme.colors.paper,
+        title = { Text(title, style = L5RTheme.type.heading2.copy(color = L5RTheme.colors.ink)) },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { new -> text = new.filter { it.isDigit() }.take(3) },
+                singleLine = true,
+                label = { Text(label) },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Done,
+                ),
+            )
+        },
+        confirmButton = {
+            TextButton(enabled = valid, onClick = { amount?.let(onConfirm) }) {
+                Text(confirmLabel.uppercase())
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("CANCEL") } },
+    )
 }
 
 @Composable
@@ -426,7 +761,11 @@ private fun MeritsSection(view: CharacterView) {
 }
 
 @Composable
-private fun EquipmentSection(view: CharacterView) {
+private fun EquipmentSection(
+    view: CharacterView,
+    equippedWeapon: String?,
+    onEquipWeapon: (String?) -> Unit,
+) {
     SheetPanel("Wealth") {
         StatRow("Koku", "${view.money.koku}")
         StatRow("Bu", "${view.money.bu}")
@@ -440,8 +779,24 @@ private fun EquipmentSection(view: CharacterView) {
     if (view.weapons.isNotEmpty()) {
         SheetPanel("Weapons") {
             view.weapons.forEach { w ->
+                val equipped = w.name == equippedWeapon
                 Column(Modifier.padding(vertical = 3.dp)) {
-                    StatRow(w.name, w.damageRoll)
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        androidx.compose.material3.Text(
+                            w.name,
+                            style = L5RTheme.type.body.copy(color = L5RTheme.colors.ink),
+                            modifier = Modifier.weight(1f),
+                        )
+                        androidx.compose.material3.Text(
+                            w.damageRoll,
+                            style = L5RTheme.type.body.copy(color = L5RTheme.colors.ink),
+                        )
+                        EquipToggle(equipped) { onEquipWeapon(w.name) }
+                    }
                     val sub = listOfNotNull(
                         w.skillName.takeIf { it.isNotBlank() },
                         w.range.takeIf { it.isNotBlank() },
@@ -456,6 +811,27 @@ private fun EquipmentSection(view: CharacterView) {
                 }
             }
         }
+    }
+}
+
+/** A small pill that equips/unequips a weapon (drives the Combat tab's attack/damage rolls). */
+@Composable
+private fun EquipToggle(equipped: Boolean, onClick: () -> Unit) {
+    val colors = L5RTheme.colors
+    val bg = if (equipped) colors.accentCrimson else colors.paperDark
+    val fg = if (equipped) colors.whiteWash else colors.inkMuted
+    Box(
+        Modifier
+            .padding(start = Spacing.s2)
+            .clip(Radii.button)
+            .background(bg)
+            .clickable(onClick = onClick)
+            .padding(horizontal = Spacing.s3, vertical = Spacing.s1),
+    ) {
+        androidx.compose.material3.Text(
+            (if (equipped) "Equipped" else "Equip").uppercase(),
+            style = L5RTheme.type.label.copy(color = fg),
+        )
     }
 }
 

@@ -10,9 +10,14 @@ import com.l5rcm.companion.data.repository.DatapackRepository
 import com.l5rcm.companion.data.repository.StoredCharacter
 import com.l5rcm.companion.data.save.SaveModel
 import com.l5rcm.companion.data.session.SessionRepository
+import com.l5rcm.companion.data.session.SessionState
+import com.l5rcm.companion.domain.model.CharacterView
 import com.l5rcm.companion.domain.model.HealthView
 import com.l5rcm.companion.domain.rules.CharacterDeriver
+import com.l5rcm.companion.domain.rules.Stance
+import com.l5rcm.companion.domain.rules.StanceRules
 import com.l5rcm.companion.domain.rules.woundStatus
+import com.l5rcm.companion.ui.dice.DicePreset
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,29 +53,58 @@ class AppViewModel @Inject constructor(
     private var pendingSave: SaveModel? = null
     private var pendingUuid: String? = null
 
-    /** The loaded character's (uuid + derived health baseline); drives the session overlay. */
-    private data class CharContext(val uuid: String, val health: HealthView)
+    /**
+     * The loaded character's derived baseline needed by the session overlay: stable [uuid], the
+     * [health] baseline, plus [voidRank]/[defenseRank] for clamping the Void pool and gating the
+     * defensive stances.
+     */
+    private data class CharContext(
+        val uuid: String,
+        val health: HealthView,
+        val voidRank: Int,
+        val defenseRank: Int,
+    )
 
     private val charContext = MutableStateFlow<CharContext?>(null)
 
+    /** Latest persisted overlay row, kept so partial edits read-modify-write the whole [SessionState]. */
+    @Volatile
+    private var lastSession: SessionState? = null
+
+    /** A dice roll pre-filled by the Combat tab, awaiting the shared dice screen. */
+    private val _pendingDice = MutableStateFlow<DicePreset?>(null)
+    val pendingDice: StateFlow<DicePreset?> = _pendingDice.asStateFlow()
+
     /**
-     * Play-time combat/session state: the wounds overlay merged onto the derived baseline.
-     * Null until a character is loaded. A missing overlay row falls back to the baseline wounds.
+     * Play-time combat/session state: the overlay (wounds, Void, stance, equipped weapon, Full
+     * Defense) merged onto the derived baseline. Null until a character is loaded; a missing overlay
+     * row falls back to the baseline (full Void pool, Attack stance, no weapon equipped).
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     val combat: StateFlow<CombatUiState?> = charContext
         .flatMapLatest { ctx ->
             if (ctx == null) {
+                lastSession = null
                 flowOf(null)
             } else {
-                sessionRepo.observeWounds(ctx.uuid).map { override ->
-                    val current = (override ?: ctx.health.currentWounds)
+                sessionRepo.observe(ctx.uuid).map { row ->
+                    lastSession = row
+                    val current = (row?.wounds ?: ctx.health.currentWounds)
                         .coerceIn(0, ctx.health.maxWounds)
+                    val voidCurrent = (ctx.voidRank - (row?.voidSpent ?: 0)).coerceIn(0, ctx.voidRank)
+                    val stance = row?.stance?.let { runCatching { Stance.valueOf(it) }.getOrNull() }
+                        ?.takeIf { StanceRules.canUse(it, ctx.defenseRank) }
+                        ?: Stance.ATTACK
                     CombatUiState(
                         currentWounds = current,
                         maxWounds = ctx.health.maxWounds,
                         healRate = ctx.health.healRate,
                         status = woundStatus(current, ctx.health.levels),
+                        voidCurrent = voidCurrent,
+                        voidMax = ctx.voidRank,
+                        stance = stance,
+                        equippedWeaponName = row?.equippedWeapon,
+                        fullDefenseTotal = row?.fullDefenseTotal,
                     )
                 }
             }
@@ -138,7 +172,9 @@ class AppViewModel @Inject constructor(
         } else {
             val packs = datapackRepo.loadEnabledSet()
             val view = CharacterDeriver.derive(save, packs)
-            charContext.value = pendingUuid?.let { CharContext(it, view.health) }
+            charContext.value = pendingUuid?.let {
+                CharContext(it, view.health, view.voidRank, defenseRankOf(view))
+            }
             _character.value = CharacterUiState.Ready(view)
         }
     }
@@ -160,32 +196,86 @@ class AppViewModel @Inject constructor(
         viewModelScope.launch { characterRepo.rememberLast(null) }
     }
 
-    // --- Combat / session state (wounds overlay) ---
+    // --- Combat / session state (wounds · Void · stance · equipped weapon overlay) ---
 
     /** Apply [amount] wounds (e.g. from a damage roll). Clamped to `0..maxWounds`. */
-    fun applyDamage(amount: Int) = adjustWounds { it + amount }
+    fun applyDamage(amount: Int) = mutate { it.copy(wounds = adjustWounds(it.wounds + amount)) }
 
     /** Heal [amount] wounds. Clamped at 0. */
-    fun applyHeal(amount: Int) = adjustWounds { it - amount }
+    fun applyHeal(amount: Int) = mutate { it.copy(wounds = adjustWounds(it.wounds - amount)) }
 
-    /** A night's rest: heal the character's heal rate (2×Stamina + Insight Rank). */
+    /**
+     * A night's rest: heal the character's heal rate (2×Stamina + Insight Rank) and refresh the
+     * Void pool to full (Void refreshes on a daily rest, rulebook p. 78).
+     */
     fun rest() {
-        val rate = combat.value?.healRate ?: charContext.value?.health?.healRate ?: return
-        adjustWounds { it - rate }
+        val rate = charContext.value?.health?.healRate ?: return
+        mutate { it.copy(wounds = adjustWounds(it.wounds - rate), voidSpent = 0) }
     }
 
-    /** Clear the wounds overlay, reverting to the imported/derived baseline. */
+    /** Revert wounds to the imported/derived baseline, leaving Void/stance/weapon untouched. */
     fun resetWounds() {
-        val ctx = charContext.value ?: return
-        viewModelScope.launch { sessionRepo.resetWounds(ctx.uuid) }
+        val baseline = charContext.value?.health?.currentWounds ?: return
+        mutate { it.copy(wounds = baseline.coerceIn(0, charContext.value?.health?.maxWounds ?: baseline)) }
     }
 
-    private inline fun adjustWounds(op: (Int) -> Int) {
+    /** Select a combat [stance]; ignored if a defensive stance is picked without a Defense rank. */
+    fun setStance(stance: Stance) {
         val ctx = charContext.value ?: return
-        val current = combat.value?.currentWounds ?: ctx.health.currentWounds
-        val next = op(current).coerceIn(0, ctx.health.maxWounds)
-        viewModelScope.launch { sessionRepo.setWounds(ctx.uuid, next) }
+        if (!StanceRules.canUse(stance, ctx.defenseRank)) return
+        // Leaving Full Defense drops its captured roll so the Armor TN bonus doesn't linger.
+        mutate {
+            it.copy(
+                stance = stance.name,
+                fullDefenseTotal = if (stance == Stance.FULL_DEFENSE) it.fullDefenseTotal else null,
+            )
+        }
     }
+
+    /** Record the Defense/Reflexes roll total that fuels the Full Defense Armor TN bonus. */
+    fun setFullDefenseTotal(total: Int) = mutate { it.copy(fullDefenseTotal = total.coerceAtLeast(0)) }
+
+    /** Spend one Void Point (no-op when the pool is empty). */
+    fun spendVoid() {
+        val ctx = charContext.value ?: return
+        mutate { it.copy(voidSpent = (it.voidSpent + 1).coerceAtMost(ctx.voidRank)) }
+    }
+
+    /** Regain one Void Point (no-op when the pool is already full). */
+    fun regainVoid() = mutate { it.copy(voidSpent = (it.voidSpent - 1).coerceAtLeast(0)) }
+
+    /** Equip [name] (or unequip when null / re-selecting the same weapon). */
+    fun equipWeapon(name: String?) = mutate {
+        it.copy(equippedWeapon = if (name == it.equippedWeapon) null else name)
+    }
+
+    private fun adjustWounds(value: Int): Int =
+        value.coerceIn(0, charContext.value?.health?.maxWounds ?: value)
+
+    /**
+     * Read-modify-write the whole overlay row. When no row exists yet the default is seeded from the
+     * derived baseline (current wounds), so the first edit to *any* field never silently resets the
+     * tracked wounds to zero.
+     */
+    private inline fun mutate(edit: (SessionState) -> SessionState) {
+        val ctx = charContext.value ?: return
+        val base = lastSession ?: SessionState(ctx.uuid, wounds = ctx.health.currentWounds)
+        val next = edit(base)
+        lastSession = next
+        viewModelScope.launch { sessionRepo.save(next) }
+    }
+
+    // --- Dice roll presets (Combat tab → shared dice screen) ---
+
+    /** Stash a pre-filled roll and let the UI navigate to the dice screen, which consumes it. */
+    fun prepareRoll(preset: DicePreset) { _pendingDice.value = preset }
+
+    /** Clear the pending preset once the dice screen has applied it. */
+    fun consumePendingDice() { _pendingDice.value = null }
+
+    private fun defenseRankOf(view: CharacterView): Int =
+        view.skills.firstOrNull { it.id == "defense" || it.name.equals("Defense", ignoreCase = true) }
+            ?.rank ?: 0
 
     // --- Library ---
 

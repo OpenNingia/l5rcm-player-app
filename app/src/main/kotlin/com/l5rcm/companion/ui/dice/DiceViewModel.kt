@@ -48,6 +48,12 @@ data class DiceUiState(
     val rolling: Boolean = false,
     val history: List<HistoryEntry> = emptyList(),
     val keypad: KeypadState? = null,
+    /**
+     * Void Points available to this roll when it is driven by the Combat tab (a context roll):
+     * spending is gated on `>= 1` and a completed spend decrements the character's tracker. Null for
+     * the standalone roller, which stays character-agnostic (Void toggle is a free +1k1 aid).
+     */
+    val voidBudget: Int? = null,
 )
 
 /**
@@ -63,6 +69,30 @@ class DiceViewModel @Inject constructor() : ViewModel() {
     private val _state = MutableStateFlow(DiceUiState())
     val state: StateFlow<DiceUiState> = _state.asStateFlow()
 
+    /** Remaining Void the character can spend (null = standalone/ungated), decremented on a spend. */
+    private var voidBudget: Int? = null
+
+    /** Invoked when a roll that spent a Void Point completes, so the Combat tracker decrements. */
+    private var onVoidConsumed: (() -> Unit)? = null
+
+    /**
+     * Seed the roller from a [DicePreset] handed over by the Combat tab (initiative, weapon attack,
+     * damage, Full Defense). Replaces the current config and clears any previous result so the
+     * screen opens ready to roll.
+     *
+     * [voidBudget] wires the "spend Void" toggle to the character's tracker: non-null gates the
+     * toggle on `>= 1` and makes a completed spend decrement it via [onVoidConsumed]. Null keeps the
+     * standalone behaviour (free +1k1). Clears any Void already toggled if the budget is empty.
+     */
+    fun applyPreset(config: RollConfig, voidBudget: Int? = null, onVoidConsumed: (() -> Unit)? = null) {
+        this.voidBudget = voidBudget
+        this.onVoidConsumed = onVoidConsumed
+        val gated = if (voidBudget != null && voidBudget < 1) config.copy(voidSpent = false) else config
+        _state.update {
+            it.copy(config = gated, effective = gated.effective(), result = null, voidBudget = voidBudget)
+        }
+    }
+
     // --- Config edits (each recomputes the effective roll) ---
 
     fun setMode(mode: RollMode) = updateConfig { it.copy(mode = mode) }
@@ -76,7 +106,14 @@ class DiceViewModel @Inject constructor() : ViewModel() {
 
     fun toggleEmphasis() = updateConfig { it.copy(emphasisToggle = !it.emphasisToggle) }
 
-    fun toggleVoid() = updateConfig { it.copy(voidSpent = !it.voidSpent) }
+    fun toggleVoid() = _state.update {
+        val turningOn = !it.config.voidSpent
+        // Context rolls can only spend Void the character actually has.
+        if (turningOn && it.voidBudget != null && it.voidBudget < 1) return@update it
+        var cfg = it.config.copy(voidSpent = turningOn)
+        if (cfg.kept > cfg.rolled) cfg = cfg.copy(kept = cfg.rolled)
+        it.copy(config = cfg, effective = cfg.effective())
+    }
 
     fun setRaises(raises: Int) = updateConfig { it.copy(raises = raises.coerceIn(0, 10)) }
 
@@ -158,6 +195,11 @@ class DiceViewModel @Inject constructor() : ViewModel() {
                 effective = eff,
                 result = result,
             )
+            // A context roll that spent Void decrements the character's tracker (once, on completion).
+            if (cfg.voidSpent && voidBudget != null) {
+                onVoidConsumed?.invoke()
+                voidBudget = (voidBudget!! - 1).coerceAtLeast(0)
+            }
             _state.update {
                 it.copy(
                     result = result,
@@ -166,6 +208,7 @@ class DiceViewModel @Inject constructor() : ViewModel() {
                     config = it.config.copy(voidSpent = false),
                     effective = it.config.copy(voidSpent = false).effective(),
                     history = (listOf(entry) + it.history).take(HISTORY_CAP),
+                    voidBudget = voidBudget,
                 )
             }
         }

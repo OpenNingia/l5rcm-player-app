@@ -27,6 +27,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,16 +55,30 @@ fun DiceScreen(
     characterSubtitle: String,
     onBack: () -> Unit,
     badgeGlyph: String = "賽",
+    preset: DicePreset? = null,
+    onPresetConsumed: () -> Unit = {},
+    voidAvailable: Int? = null,
+    onVoidSpent: () -> Unit = {},
     viewModel: DiceViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val cfg = state.config
     val eff = state.effective
 
+    // A Combat-tab preset seeds the roller once, then is consumed so re-opening the plain roller
+    // (from the drawer) doesn't reapply it. Context rolls also wire the Void toggle to the tracker.
+    LaunchedEffect(preset) {
+        preset?.let {
+            viewModel.applyPreset(it.config, voidAvailable, onVoidSpent)
+            onPresetConsumed()
+        }
+    }
+
     Box(Modifier.fillMaxSize().background(L5RTheme.colors.paper)) {
         RicePaperOverlay(Modifier.fillMaxSize())
         Column(Modifier.fillMaxSize()) {
-            DiceTopBar(characterName, characterSubtitle, badgeGlyph, onBack)
+            val subtitle = preset?.title?.ifBlank { characterSubtitle } ?: characterSubtitle
+            DiceTopBar(characterName, subtitle, badgeGlyph, onBack)
             Column(
                 Modifier
                     .fillMaxSize()
@@ -95,7 +110,12 @@ fun DiceScreen(
                     ConfigTile("Bonus", signed(cfg.bonus)) { viewModel.openKeypad(KeypadField.BONUS) }
                 }
 
-                VoidCard(cfg.voidSpent, promotes = eff.isSkill && !cfg.skilled, onToggle = viewModel::toggleVoid)
+                VoidCard(
+                    spent = cfg.voidSpent,
+                    promotes = eff.isSkill && !cfg.skilled,
+                    budget = state.voidBudget,
+                    onToggle = viewModel::toggleVoid,
+                )
 
                 if (cfg.mode == RollMode.TN) {
                     TnRow(state, viewModel)
@@ -252,8 +272,10 @@ private fun HeroNotation(state: DiceUiState) {
 }
 
 @Composable
-private fun VoidCard(spent: Boolean, promotes: Boolean, onToggle: () -> Unit) {
+private fun VoidCard(spent: Boolean, promotes: Boolean, budget: Int?, onToggle: () -> Unit) {
     val colors = L5RTheme.colors
+    // A context roll gates on the tracker: no points left → can't spend. Standalone (null) is free.
+    val depleted = budget != null && budget < 1
     Column(
         Modifier
             .fillMaxWidth()
@@ -269,13 +291,15 @@ private fun VoidCard(spent: Boolean, promotes: Boolean, onToggle: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             SectionLabel("Punto del Vuoto")
-            Text("1 per tiro", style = L5RTheme.type.caption.copy(color = colors.inkFaint))
+            val hint = if (budget != null) "$budget disponibili" else "1 per tiro"
+            Text(hint, style = L5RTheme.type.caption.copy(color = colors.inkFaint))
         }
         ToggleBar(
-            label = "✦ Spendi — +1k1",
+            label = if (depleted && !spent) "✦ Nessun punto disponibile" else "✦ Spendi — +1k1",
             active = spent,
             onClick = onToggle,
             activeBg = colors.accentGold,
+            enabled = !depleted || spent,
         )
         if (promotes) {
             Text(

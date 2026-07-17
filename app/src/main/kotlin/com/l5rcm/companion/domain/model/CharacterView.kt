@@ -133,7 +133,19 @@ data class WeaponView(
     val damageRoll: String,
     val range: String,
     val tags: List<String>,
-)
+    /** Attack pool `attackRolled k attackKept` = (weapon skill's Trait + skill rank) k Trait. 0k0 if unresolved. */
+    val attackRolled: Int = 0,
+    val attackKept: Int = 0,
+    /** Damage pool `damageRolled k damageKept`, parsed from the save's `dr` (e.g. "3k2"). 0k0 if unparsable. */
+    val damageRolled: Int = 0,
+    val damageKept: Int = 0,
+) {
+    /** True when there is a real attack pool to roll (skill/trait resolved). */
+    val hasAttack: Boolean get() = attackRolled > 0 && attackKept > 0
+
+    /** True when the damage roll parsed into a real pool. */
+    val hasDamage: Boolean get() = damageRolled > 0 && damageKept > 0
+}
 
 data class ArmorView(val name: String, val tn: Int, val rd: Int)
 
