@@ -364,12 +364,23 @@ object CharacterDeriver {
                 }
                 else -> com.l5rcm.companion.domain.dice.parseNotation(w.base_atk) ?: (0 to 0)
             }
-            val (dmgRolled, dmgKept) = com.l5rcm.companion.domain.dice.parseNotation(w.dr) ?: (0 to 0)
+            // Damage roll = (Strength + weapon DR rolled) k (weapon DR kept), matching the desktop's
+            // calculate_base_damage_roll. A ranged weapon caps the added Strength at its own
+            // Strength Rating: a bow uses min(bow strength, wielder Strength).
+            val (drRolled, drKept) = com.l5rcm.companion.domain.dice.parseNotation(w.dr) ?: (0 to 0)
+            val weaponStrength = w.strength.toIntOrNull() ?: 0
+            val strengthForDamage = modifiedTraitRank(Trait.STRENGTH).let { str ->
+                if ("ranged" in w.tags && weaponStrength > 0) minOf(weaponStrength, str) else str
+            }
+            val dmgRolled = drRolled + strengthForDamage
+            val dmgKept = drKept
 
             WeaponView(
                 name = w.name,
                 skillName = skillName,
-                damageRoll = w.dr,
+                // Show the effective damage pool (Strength folded in), falling back to the raw DR
+                // notation when it doesn't parse into a real pool.
+                damageRoll = if (drKept > 0) "${dmgRolled}k$dmgKept" else w.dr,
                 range = w.range,
                 tags = w.tags,
                 attackRolled = atkRolled,

@@ -58,6 +58,9 @@ class CharacterDeriverTest {
             // trait "water" here is deliberately a ring, not a trait: the skill's own trait
             // (Kenjutsu → Agility) must win when building the attack pool.
             WeaponOutfit(name = "Katana", dr = "3k2", skill_id = "kenjutsu", skill_nm = "Kenjutsu", trait = "water"),
+            // A bow whose Strength Rating (1) is below the wielder's Strength (2): the ranged
+            // damage roll must cap the added Strength at the bow's rating.
+            WeaponOutfit(name = "Yumi", dr = "2k2", strength = "1", tags = listOf("ranged"), skill_nm = "Kyujutsu"),
         ),
     )
 
@@ -142,13 +145,20 @@ class CharacterDeriverTest {
     @Test
     fun derivesWeaponAttackAndDamagePools() {
         val v = CharacterDeriver.derive(sampleSave(), datapacks())
-        val katana = v.weapons.single()
+        val katana = v.weapons.first { it.name == "Katana" }
         // Attack = (Agility 2 + Kenjutsu 2) k Agility 2 = 4k2 (skill's Trait beats the weapon's).
         assertEquals(4, katana.attackRolled)
         assertEquals(2, katana.attackKept)
-        // Damage parsed straight from dr "3k2".
-        assertEquals(3, katana.damageRolled)
+        // Damage = Strength 2 + weapon DR 3k2 = 5k2 (Strength folds into the rolled dice).
+        assertEquals(5, katana.damageRolled)
         assertEquals(2, katana.damageKept)
+        assertEquals("5k2", katana.damageRoll)
+
+        // Ranged: the Yumi's Strength Rating (1) is below the wielder's Strength (2), so its
+        // damage adds only 1 → 1 + DR 2k2 = 3k2.
+        val yumi = v.weapons.first { it.name == "Yumi" }
+        assertEquals(3, yumi.damageRolled)
+        assertEquals(2, yumi.damageKept)
     }
 
     @Test
