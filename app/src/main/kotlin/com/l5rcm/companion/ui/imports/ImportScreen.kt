@@ -66,6 +66,7 @@ fun ImportRouter(
                 onCombatRoll = onCombatRoll,
                 onOpenLibrary = onOpenLibrary,
                 onImport = openPicker,
+                onScanQr = onScanQr,
                 onOpenDice = onOpenDice,
             )
         }
