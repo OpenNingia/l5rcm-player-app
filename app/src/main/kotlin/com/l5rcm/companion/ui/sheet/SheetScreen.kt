@@ -68,6 +68,7 @@ fun SheetScreen(
     onCombatRoll: (DicePreset) -> Unit,
     onOpenLibrary: () -> Unit,
     onImport: () -> Unit,
+    onScanQr: () -> Unit,
     onOpenDice: () -> Unit,
 ) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -95,7 +96,10 @@ fun SheetScreen(
                 }
                 ExtraNavRow("Dice Roller", "賽") { scope.launch { drawerState.close() }; onOpenDice() }
                 ExtraNavRow("Datapack Library", "蔵") { scope.launch { drawerState.close() }; onOpenLibrary() }
-                ExtraNavRow("Import another…", "替") { scope.launch { drawerState.close() }; onImport() }
+                // Import another character — file or QR. Re-importing the same character (same uuid)
+                // refreshes the sheet from a desktop edit and keeps its session overlay.
+                ExtraNavRow("Import .l5r file", "替") { scope.launch { drawerState.close() }; onImport() }
+                ExtraNavRow("Scan QR code", "掃") { scope.launch { drawerState.close() }; onScanQr() }
             }
         },
     ) {
