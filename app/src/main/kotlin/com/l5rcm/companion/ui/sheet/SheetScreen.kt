@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.l5rcm.companion.domain.model.CharacterView
+import com.l5rcm.companion.domain.model.Ring
 import com.l5rcm.companion.domain.rules.Stance
 import com.l5rcm.companion.ui.CombatUiState
 import com.l5rcm.companion.ui.dice.DicePreset
@@ -65,6 +66,7 @@ fun SheetScreen(
     onEquipWeapon: (String?) -> Unit,
     onToggleArmor: () -> Unit,
     onSetFullDefenseTotal: (Int) -> Unit,
+    onSpellSlot: (Ring, Int) -> Unit,
     onCombatRoll: (DicePreset) -> Unit,
     onOpenLibrary: () -> Unit,
     onImport: () -> Unit,
@@ -131,6 +133,7 @@ fun SheetScreen(
                         onEquipWeapon = onEquipWeapon,
                         onToggleArmor = onToggleArmor,
                         onSetFullDefenseTotal = onSetFullDefenseTotal,
+                        onSpellSlot = onSpellSlot,
                         onCombatRoll = onCombatRoll,
                     )
                 }

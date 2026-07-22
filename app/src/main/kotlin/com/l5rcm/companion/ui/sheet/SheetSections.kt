@@ -39,6 +39,7 @@ import com.l5rcm.companion.domain.model.Ring
 import com.l5rcm.companion.domain.model.Trait
 import com.l5rcm.companion.domain.model.WeaponView
 import com.l5rcm.companion.domain.model.WoundLevel
+import com.l5rcm.companion.domain.rules.SpellSlot
 import com.l5rcm.companion.domain.rules.Stance
 import com.l5rcm.companion.domain.rules.StanceRules
 import com.l5rcm.companion.domain.rules.WoundStatus
@@ -71,6 +72,7 @@ fun SectionContent(
     onEquipWeapon: (String?) -> Unit,
     onToggleArmor: () -> Unit,
     onSetFullDefenseTotal: (Int) -> Unit,
+    onSpellSlot: (Ring, Int) -> Unit,
     onCombatRoll: (DicePreset) -> Unit,
 ) {
     SectionHeader(section.title, section.kanji)
@@ -82,7 +84,7 @@ fun SectionContent(
         )
         SheetSection.SKILLS -> SkillsSection(view)
         SheetSection.TECHNIQUES -> TechniquesSection(view)
-        SheetSection.SPELLS -> SpellsSection(view)
+        SheetSection.SPELLS -> SpellsSection(view, combat?.spellSlots.orEmpty(), onSpellSlot)
         SheetSection.KATA_KIHO -> KataKihoSection(view)
         SheetSection.MERITS -> MeritsSection(view)
         SheetSection.EQUIPMENT -> EquipmentSection(
@@ -383,8 +385,12 @@ private fun VoidPanel(current: Int, max: Int, onSpend: () -> Unit, onRegain: () 
 }
 
 @Composable
-private fun VoidPip(filled: Boolean, onClick: () -> Unit) {
-    val color = L5RTheme.colors.ringVoid
+private fun VoidPip(filled: Boolean, onClick: () -> Unit) =
+    SlotPip(filled = filled, color = L5RTheme.colors.ringVoid, onClick = onClick)
+
+/** A single round pip: filled = available (tap to spend), outlined = spent (tap to regain). */
+@Composable
+private fun SlotPip(filled: Boolean, color: Color, onClick: () -> Unit) {
     Box(
         Modifier
             .size(28.dp)
@@ -393,6 +399,52 @@ private fun VoidPip(filled: Boolean, onClick: () -> Unit) {
             .then(if (filled) Modifier else Modifier.border(1.5.dp, color, RoundedCornerShape(50)))
             .clickable(onClick = onClick),
     )
+}
+
+// --- Spell slots: one tappable pip track per element pool + the flexible Void pool (RAW p.166) ---
+
+@Composable
+private fun SpellSlotsPanel(slots: List<SpellSlot>, onSpellSlot: (Ring, Int) -> Unit) {
+    SheetPanel("Spell Slots") {
+        if (slots.isEmpty()) {
+            EmptyNoteInline("No spell slots — this character casts no spells.")
+            return@SheetPanel
+        }
+        slots.forEachIndexed { i, slot ->
+            if (i > 0) PlainRule(Modifier.padding(vertical = Spacing.s2))
+            SpellSlotRow(slot, onSpellSlot)
+        }
+        Text(
+            "Tap a filled slot to spend, an empty one to regain. A failed casting still burns a " +
+                "slot; Void slots may be spent for any element. Rest refreshes them all.",
+            style = L5RTheme.type.caption.copy(color = L5RTheme.colors.inkMuted),
+            modifier = Modifier.padding(top = Spacing.s2),
+        )
+    }
+}
+
+@Composable
+private fun SpellSlotRow(slot: SpellSlot, onSpellSlot: (Ring, Int) -> Unit) {
+    val color = L5RTheme.colors.ringColor(slot.ring.id)
+    val label = if (slot.ring == Ring.VOID) "Void (any)" else slot.ring.id.replaceFirstChar { it.uppercase() }
+    Row(
+        Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(label.uppercase(), style = L5RTheme.type.label.copy(color = color))
+        Text("${slot.current} / ${slot.max}", style = L5RTheme.type.body.copy(color = L5RTheme.colors.ink))
+    }
+    Row(
+        Modifier.fillMaxWidth().padding(top = Spacing.s1),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.s2),
+    ) {
+        for (n in 1..slot.max) {
+            SlotPip(filled = n <= slot.current, color = color) {
+                onSpellSlot(slot.ring, if (n <= slot.current) +1 else -1)
+            }
+        }
+    }
 }
 
 // --- Stance selector + live Armor TN ---
@@ -718,7 +770,11 @@ private fun TechniquesSection(view: CharacterView) {
 }
 
 @Composable
-private fun SpellsSection(view: CharacterView) {
+private fun SpellsSection(
+    view: CharacterView,
+    spellSlots: List<SpellSlot>,
+    onSpellSlot: (Ring, Int) -> Unit,
+) {
     val spells = view.spells
     if (spells.known.isEmpty() && spells.memorized.isEmpty()) { EmptyNote("No spells."); return }
     if (spells.affinities.isNotEmpty() || spells.deficiencies.isNotEmpty()) {
@@ -727,6 +783,7 @@ private fun SpellsSection(view: CharacterView) {
             if (spells.deficiencies.isNotEmpty()) StatRow("Deficiency", spells.deficiencies.joinToString(", "))
         }
     }
+    SpellSlotsPanel(spellSlots, onSpellSlot)
     val all = (spells.memorized.ifEmpty { spells.known })
     SheetPanel("Spells") {
         all.forEach { s ->

@@ -49,8 +49,16 @@ per character, resettable to the derived baseline.
   (x2 default); rest-heal = 2×Stamina + Insight Rank per night.
 - ✅ **Void points** — spend/regain against the pool (= Void Ring); one spend per round; refreshes on
   daily rest. In the Combat tab as a tappable pip track.
-- 🔜 **Spell slots** — per-element counters (= element Ring) plus the Void-Ring bonus slots; a failed
-  cast still burns a slot.
+- ✅ **Spell slots** — per-element daily counters (= element Ring) plus the flexible Void-Ring bonus
+  pool (spendable for any element); a failed cast still burns a slot, and a Rest refreshes them all
+  (sunrise refresh, RAW p.166). In the **Spells** tab as tappable pip tracks (tap filled to spend,
+  empty to regain), shown only for shugenja. Pure `spellSlots()` (Layer B) sizes the pools; the
+  spent counts live in the Room overlay (`SessionState`), never touching the `.l5r`.
+  - 💭 *Debt — affinity/deficiency slots.* Pool size is the raw element Ring: **affinity does not add
+    a slot** and **deficiency does not remove the pool**. Several schools/advantages also shift slot
+    counts (e.g. an affinity treating the Ring as one higher for how many spells you may cast, or
+    "one less Earth slot"). These are unmodelled; `SpellsView.affinities`/`deficiencies` are already
+    derived, so a first pass could apply the flat ±1 before a full modifier engine (Theme 4) lands.
 - 🔜 **Status conditions** — toggle the standard conditions (Blinded, Dazed, Entangled, Fatigued,
   Grappled, Prone, Stunned, Fear) and apply their roll/Armor-TN effects; expose their recovery rolls.
 - 🔜 **Session notes** — free-form per-character notes for things earned during play that the app
