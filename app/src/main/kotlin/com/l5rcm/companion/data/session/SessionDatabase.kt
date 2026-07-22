@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  * Room store for the per-character session overlay. `exportSchema = false` — schema history is
  * tracked by hand-written [Migration]s (the overlay is small, resettable play state).
  */
-@Database(entities = [SessionState::class], version = 2, exportSchema = false)
+@Database(entities = [SessionState::class], version = 3, exportSchema = false)
 abstract class SessionDatabase : RoomDatabase() {
     abstract fun sessionStateDao(): SessionStateDao
 
@@ -21,6 +21,13 @@ abstract class SessionDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE session_state ADD COLUMN stance TEXT")
                 db.execSQL("ALTER TABLE session_state ADD COLUMN equippedWeapon TEXT")
                 db.execSQL("ALTER TABLE session_state ADD COLUMN fullDefenseTotal INTEGER")
+            }
+        }
+
+        /** v2 → v3: add the armor-worn toggle (defaults to worn, so existing rows keep their armor). */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE session_state ADD COLUMN armorEquipped INTEGER NOT NULL DEFAULT 1")
             }
         }
     }

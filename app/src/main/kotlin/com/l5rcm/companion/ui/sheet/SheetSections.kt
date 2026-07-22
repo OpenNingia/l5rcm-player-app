@@ -69,6 +69,7 @@ fun SectionContent(
     onSpendVoid: () -> Unit,
     onRegainVoid: () -> Unit,
     onEquipWeapon: (String?) -> Unit,
+    onToggleArmor: () -> Unit,
     onSetFullDefenseTotal: (Int) -> Unit,
     onCombatRoll: (DicePreset) -> Unit,
 ) {
@@ -84,7 +85,9 @@ fun SectionContent(
         SheetSection.SPELLS -> SpellsSection(view)
         SheetSection.KATA_KIHO -> KataKihoSection(view)
         SheetSection.MERITS -> MeritsSection(view)
-        SheetSection.EQUIPMENT -> EquipmentSection(view, combat?.equippedWeaponName, onEquipWeapon)
+        SheetSection.EQUIPMENT -> EquipmentSection(
+            view, combat?.equippedWeaponName, combat?.armorEquipped ?: true, onEquipWeapon, onToggleArmor,
+        )
         SheetSection.MODIFIERS -> ModifiersSection(view)
         SheetSection.NOTES -> NotesSection(view)
         SheetSection.ABOUT -> AboutSection(view)
@@ -189,7 +192,13 @@ private fun CombatSection(
     val defenseRank = view.skills
         .firstOrNull { it.id == "defense" || it.name.equals("Defense", ignoreCase = true) }?.rank ?: 0
     val armorTnDelta = StanceRules.armorTnDelta(stance, airRank, defenseRank, fullDefenseTotal)
-    val effectiveArmorTn = view.combat.fullTn + armorTnDelta
+    // Removing armor (play-time overlay, Layer B) drops its own TN / RD bonus; the derived sheet
+    // (Layer A, Character tab) always shows the armored baseline and is never rewritten here.
+    val armorEquipped = combat?.armorEquipped ?: true
+    val armorTnBonus = if (armorEquipped) 0 else (view.armor?.tn ?: 0)
+    val armoredBaseTn = view.combat.fullTn - armorTnBonus
+    val effectiveArmorTn = armoredBaseTn + armorTnDelta
+    val effectiveRd = view.combat.fullRd - (if (armorEquipped) 0 else (view.armor?.rd ?: 0))
 
     var dialog by remember { mutableStateOf<WoundDialogKind?>(null) }
     var fullDefenseDialog by remember { mutableStateOf(false) }
@@ -238,7 +247,7 @@ private fun CombatSection(
     StancePanel(
         stance = stance,
         defenseRank = defenseRank,
-        baseArmorTn = view.combat.fullTn,
+        baseArmorTn = armoredBaseTn,
         effectiveArmorTn = effectiveArmorTn,
         fullDefenseTotal = fullDefenseTotal,
         onSetStance = onSetStance,
@@ -295,8 +304,8 @@ private fun CombatSection(
     SheetPanel("Initiative & Defense") {
         StatRow("Initiative", "${view.combat.initiativeRoll}k${view.combat.initiativeKeep}")
         StatRow("Base TN", "${view.combat.baseTn}")
-        StatRow("Armor TN (stance)", "$effectiveArmorTn")
-        StatRow("Reduction", "${view.combat.fullRd}")
+        StatRow("Armor TN (stance)", "$effectiveArmorTn" + if (!armorEquipped) "  (no armor)" else "")
+        StatRow("Reduction", "$effectiveRd" + if (!armorEquipped) "  (no armor)" else "")
         WoundActionButton(
             "Roll initiative", L5RTheme.colors.accentBlue, L5RTheme.colors.whiteWash,
             Modifier.fillMaxWidth().padding(top = Spacing.s3),
@@ -764,7 +773,9 @@ private fun MeritsSection(view: CharacterView) {
 private fun EquipmentSection(
     view: CharacterView,
     equippedWeapon: String?,
+    armorEquipped: Boolean,
     onEquipWeapon: (String?) -> Unit,
+    onToggleArmor: () -> Unit,
 ) {
     SheetPanel("Wealth") {
         StatRow("Koku", "${view.money.koku}")
@@ -773,7 +784,30 @@ private fun EquipmentSection(
     }
     view.armor?.let {
         SheetPanel("Armor") {
-            StatRow(it.name.ifBlank { "Armor" }, "TN +${it.tn}  ·  RD ${it.rd}")
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    androidx.compose.material3.Text(
+                        it.name.ifBlank { "Armor" },
+                        style = L5RTheme.type.body.copy(color = L5RTheme.colors.ink),
+                    )
+                    androidx.compose.material3.Text(
+                        "TN +${it.tn}  ·  RD ${it.rd}",
+                        style = L5RTheme.type.caption.copy(color = L5RTheme.colors.inkMuted),
+                    )
+                }
+                EquipToggle(armorEquipped) { onToggleArmor() }
+            }
+            if (!armorEquipped) {
+                androidx.compose.material3.Text(
+                    "Removed — Armor TN and Reduction drop by the armor's bonus in the Combat tab.",
+                    style = L5RTheme.type.caption.copy(color = L5RTheme.colors.inkMuted),
+                    modifier = Modifier.padding(top = Spacing.s1),
+                )
+            }
         }
     }
     if (view.weapons.isNotEmpty()) {

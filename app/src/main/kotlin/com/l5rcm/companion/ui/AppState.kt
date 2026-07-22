@@ -37,6 +37,8 @@ data class CombatUiState(
     val equippedWeaponName: String?,
     /** Captured Defense/Reflexes roll total feeding the Full Defense Armor TN bonus; null until rolled. */
     val fullDefenseTotal: Int?,
+    /** Whether the character's armor is worn; when false its Armor TN / RD bonus is dropped. */
+    val armorEquipped: Boolean,
 )
 
 /** State of the datapack Library (catalog + installed registry). */

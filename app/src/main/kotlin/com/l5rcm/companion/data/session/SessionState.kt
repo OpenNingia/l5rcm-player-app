@@ -26,4 +26,6 @@ data class SessionState(
     val equippedWeapon: String? = null,
     /** Captured Defense/Reflexes roll total that fuels the Full Defense Armor TN bonus; null until rolled. */
     val fullDefenseTotal: Int? = null,
+    /** Whether the character's armor is worn; false = fighting unarmored, dropping its Armor TN / RD bonus. */
+    val armorEquipped: Boolean = true,
 )

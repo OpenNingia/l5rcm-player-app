@@ -62,6 +62,7 @@ fun ImportRouter(
                 onSpendVoid = viewModel::spendVoid,
                 onRegainVoid = viewModel::regainVoid,
                 onEquipWeapon = viewModel::equipWeapon,
+                onToggleArmor = viewModel::toggleArmor,
                 onSetFullDefenseTotal = viewModel::setFullDefenseTotal,
                 onCombatRoll = onCombatRoll,
                 onOpenLibrary = onOpenLibrary,
