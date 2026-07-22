@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>L5RCM Companion — Product Roadmap</title>
+<style>
+  :root {
+    color-scheme: light;
+    --plane:        #f3efe4;  /* warm parchment page */
+    --surface-1:    #fcfcfb;  /* card surface */
+    --surface-2:    #f7f4ea;  /* recessed / track */
+    --text-primary: #1b1710;
+    --text-secondary:#52514e;
+    --muted:        #8a887f;
+    --grid:         #e4e0d3;
+    --border:       rgba(27,23,16,0.10);
+    --accent:       #7c1f24;  /* clan-crimson chrome accent */
+
+    /* status encoding — always paired with a glyph + label */
+    --st-done:      #0ca30c;
+    --st-doing:     #2a78d6;
+    --st-plan:      #8a887f;
+    --st-explore:   #b8b7b0;
+
+    --serif: "Cinzel", "IM Fell English", Georgia, "Times New Roman", serif;
+    --sans:  system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  html[data-theme="dark"] {
+    color-scheme: dark;
+    --plane:        #0e0d0b;
+    --surface-1:    #1a1a19;
+    --surface-2:    #232220;
+    --text-primary: #f4f1e8;
+    --text-secondary:#c3c2b7;
+    --muted:        #8a887f;
+    --grid:         #2c2c2a;
+    --border:       rgba(255,255,255,0.10);
+    --accent:       #d98b8f;
+    --st-done:      #0ca30c;
+    --st-doing:     #3987e5;
+    --st-plan:      #8a887f;
+    --st-explore:   #5a5a56;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--plane);
+    color: var(--text-primary);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 32px 24px 72px; }
+
+  /* ---- header ---- */
+  header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+           border-bottom: 2px solid var(--accent); padding-bottom: 16px; margin-bottom: 8px; }
+  .brand h1 { font-family: var(--serif); font-weight: 600; letter-spacing: .04em; font-size: 30px; margin: 0; }
+  .brand p  { margin: 4px 0 0; color: var(--text-secondary); max-width: 62ch; }
+  .chips { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .chip { font-size: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border);
+          background: var(--surface-1); color: var(--text-secondary); white-space: nowrap; }
+  .chip strong { color: var(--text-primary); }
+  .toolbar { display: flex; gap: 8px; }
+  button.tbtn { font: inherit; font-size: 13px; cursor: pointer; padding: 6px 12px; border-radius: 8px;
+                border: 1px solid var(--border); background: var(--surface-1); color: var(--text-primary); }
+  button.tbtn:hover { border-color: var(--accent); }
+  button.tbtn[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .note { color: var(--muted); font-size: 12.5px; margin: 14px 0 24px; }
+
+  /* ---- KPI row ---- */
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
+  .tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .tile .lab { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--text-secondary); }
+  .tile .val { font-size: 34px; font-weight: 650; line-height: 1.1; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .dot { width: 11px; height: 11px; border-radius: 3px; flex: none; display: inline-block; }
+  .dot.done{background:var(--st-done)} .dot.doing{background:var(--st-doing)}
+  .dot.plan{background:var(--st-plan)} .dot.explore{background:var(--st-explore)}
+
+  /* ---- overview stacked bar ---- */
+  .overview { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; margin-bottom: 12px; }
+  .overview h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-secondary);
+                 margin: 0 0 10px; font-weight: 600; }
+  .stack { display: flex; width: 100%; height: 26px; border-radius: 6px; overflow: hidden; gap: 2px; background: var(--surface-2); }
+  .seg { height: 100%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px;
+         font-weight: 600; font-variant-numeric: tabular-nums; min-width: 2px; }
+  .seg.done{background:var(--st-done)} .seg.doing{background:var(--st-doing)}
+  .seg.plan{background:var(--st-plan)} .seg.explore{background:var(--st-explore); color: var(--text-primary)}
+
+  .legend { display: flex; gap: 18px; flex-wrap: wrap; margin: 12px 2px 30px; font-size: 13px; color: var(--text-secondary); }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; }
+  .glyph { font-size: 13px; width: 16px; text-align: center; }
+
+  /* ---- theme sections ---- */
+  section.theme { background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px;
+                  padding: 18px 20px; margin-bottom: 16px; }
+  .thead { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+  .thead h3 { font-family: var(--serif); font-weight: 600; font-size: 20px; margin: 0; letter-spacing: .02em; }
+  .thead .rel { font-size: 12px; color: var(--muted); }
+  .why { color: var(--text-secondary); font-size: 13.5px; margin: 4px 0 12px; max-width: 78ch; }
+  .minibar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; gap: 2px; background: var(--surface-2);
+             margin: 0 0 14px; }
+  .minibar i { height: 100%; display: block; }
+  .minibar i.done{background:var(--st-done)} .minibar i.doing{background:var(--st-doing)}
+  .minibar i.plan{background:var(--st-plan)} .minibar i.explore{background:var(--st-explore)}
+
+  ul.items { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  li.item { display: grid; grid-template-columns: 20px 1fr; gap: 12px; padding: 9px 10px; border-radius: 8px;
+            align-items: start; transition: background .12s; }
+  li.item:hover { background: var(--surface-2); }
+  li.item .glyph { padding-top: 2px; }
+  li.item .body .name { font-weight: 600; }
+  li.item .body .desc { color: var(--text-secondary); font-size: 13px; margin-top: 2px; }
+  .st-done .glyph { color: var(--st-done); }
+  .st-doing .glyph { color: var(--st-doing); }
+  .st-plan .glyph { color: var(--st-plan); }
+  .st-explore { opacity: .82; }
+  .st-explore .glyph { color: var(--muted); }
+  .st-explore .name { font-weight: 500; }
+  .badge { font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; padding: 1px 7px; border-radius: 999px;
+           margin-left: 8px; vertical-align: 1.5px; border: 1px solid var(--border); color: var(--text-secondary); }
+
+  /* ---- shipped banner ---- */
+  .shipped { background: linear-gradient(0deg, var(--surface-2), var(--surface-1)); border: 1px solid var(--border);
+             border-left: 4px solid var(--st-done); border-radius: 12px; padding: 14px 18px; margin-bottom: 22px; }
+  .shipped h3 { margin: 0 0 4px; font-family: var(--serif); font-size: 18px; font-weight: 600; }
+  .shipped .row { display: flex; gap: 8px 18px; flex-wrap: wrap; color: var(--text-secondary); font-size: 13px; margin-top: 6px; }
+  .shipped .row b { color: var(--text-primary); font-weight: 600; }
+
+  /* ---- table view ---- */
+  #tableview { display: none; }
+  #tableview.on { display: block; }
+  #board.off { display: none; }
+  table { width: 100%; border-collapse: collapse; background: var(--surface-1); border: 1px solid var(--border);
+          border-radius: 12px; overflow: hidden; font-size: 13.5px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+  th { background: var(--surface-2); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary); }
+  tr:last-child td { border-bottom: none; }
+  td.stcell { white-space: nowrap; font-weight: 600; }
+
+  footer { margin-top: 34px; color: var(--text-secondary); font-size: 13px; border-top: 1px solid var(--grid); padding-top: 18px; }
+  footer h4 { font-family: var(--serif); color: var(--text-primary); margin: 0 0 6px; font-size: 15px; }
+  footer p { margin: 4px 0 14px; max-width: 90ch; }
+
+  @media (max-width: 720px) {
+    .kpis { grid-template-columns: repeat(2, 1fr); }
+    .brand h1 { font-size: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <h1>L5RCM Companion</h1>
+      <p>Product roadmap for the Android <em>play-at-the-table</em> companion — imports a
+         <code>.l5r</code>, renders a read-only sheet, and grows table-time tooling. Organised by
+         <strong>theme</strong>, not fixed dates.</p>
+    </div>
+    <div class="chips">
+      <span class="chip">Released <strong>v0.2.1</strong></span>
+      <span class="chip">Branch <strong>main</strong></span>
+      <div class="toolbar">
+        <button class="tbtn" id="themeBtn" aria-pressed="false">Dark</button>
+        <button class="tbtn" id="tableBtn" aria-pressed="false">Table view</button>
+      </div>
+    </div>
+  </header>
+
+  <p class="note">Status reconciled from <code>docs/ROADMAP.md</code> and git history on <code>main</code>:
+     the Roll&nbsp;&amp;&nbsp;Keep engine shipped in v0.2.0; the Room session overlay, wounds &amp; Void
+     trackers shipped in v0.2.1; initiative/stance and weapon rolls are now merged to <code>main</code>.</p>
+
+  <!-- Shipped MVP foundation -->
+  <div class="shipped">
+    <h3>✅ Shipped foundation — v1 MVP</h3>
+    <div class="row">
+      <span><b>SAF + QR import</b> of <code>.l5r</code></span>
+      <span><b>Datapack</b> download &amp; manage</span>
+      <span><b>Native readers</b> (.l5r + datapack)</span>
+      <span><b>Pure-Kotlin deriver</b> (traits/rings, skills, insight, wounds, TN, XP)</span>
+      <span><b>Read-only sheet</b>, clan-accented design system</span>
+    </div>
+  </div>
+
+  <div id="board">
+    <!-- KPI row -->
+    <div class="kpis">
+      <div class="tile"><div class="lab"><span class="dot done"></span>Done</div><div class="val">7</div></div>
+      <div class="tile"><div class="lab"><span class="dot doing"></span>In progress</div><div class="val">3</div></div>
+      <div class="tile"><div class="lab"><span class="dot plan"></span>Planned</div><div class="val">13</div></div>
+      <div class="tile"><div class="lab"><span class="dot explore"></span>Exploratory</div><div class="val">13</div></div>
+    </div>
+
+    <!-- overview stacked bar -->
+    <div class="overview">
+      <h2>All roadmap items by status — 36 total</h2>
+      <div class="stack" role="img" aria-label="7 done, 3 in progress, 13 planned, 13 exploratory of 36 items">
+        <div class="seg done"    style="width:19.4%" title="Done — 7">7</div>
+        <div class="seg doing"   style="width:8.3%" title="In progress — 3">3</div>
+        <div class="seg plan"    style="width:36.1%" title="Planned — 13">13</div>
+        <div class="seg explore" style="width:36.1%" title="Exploratory — 13">13</div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span><span class="glyph">✅</span> Done</span>
+      <span><span class="glyph">🔨</span> In progress</span>
+      <span><span class="glyph">🔜</span> Planned</span>
+      <span><span class="glyph">💭</span> Exploratory (not committed)</span>
+    </div>
+
+    <!-- Theme 1 -->
+    <section class="theme">
+      <div class="thead"><h3>1 · Session state</h3><span class="rel">v1.1 · near-term focus</span></div>
+      <p class="why">At the table the numbers change — wounds, Void, spells. A local per-character overlay
+         (Room) tracks it and <em>never</em> writes back to the <code>.l5r</code>; resettable to baseline.</p>
+      <div class="minibar" role="img" aria-label="3 done, 3 planned, 3 exploratory">
+        <i class="done" style="width:33.3%"></i><i class="plan" style="width:33.3%"></i><i class="explore" style="width:33.3%"></i>
+      </div>
+      <ul class="items">
+        <li class="item st-done"><span class="glyph">✅</span><div class="body"><div class="name">Room-backed session overlay</div><div class="desc">Persistence layer for the whole theme; merged onto the derived baseline in <code>AppViewModel</code>, missing row = no overlay.</div></div></li>
+        <li class="item st-done"><span class="glyph">✅</span><div class="body"><div class="name">Wounds tracker</div><div class="desc">Combat tab: specific damage/heal entry, Rest &amp; Reset; surfaces wound level + penalty via pure <code>woundStatus()</code>.</div></div></li>
+        <li class="item st-done"><span class="glyph">✅</span><div class="body"><div class="name">Void points</div><div class="desc">Spend/regain against the pool (= Void Ring); one spend per round; refreshes on daily rest.</div></div></li>
+        <li class="item st-plan"><span class="glyph">🔜</span><div class="body"><div class="name">Spell slots</div><div class="desc">Per-element counters (= element Ring) plus Void-Ring bonus slots; a failed cast still burns a slot.</div></div></li>
+        <li class="item st-plan"><span class="glyph">🔜</span><div class="body"><div class="name">Status conditions</div><div class="desc">Toggle Blinded / Dazed / Fatigued / Prone / Stunned / Fear… and apply their roll &amp; Armor-TN effects.</div></div></li>
+        <li class="item st-plan"><span class="glyph">🔜</span><div class="body"><div class="name">Session notes</div><div class="desc">Free-form worklist for XP gained / loot / plot — deliberately <em>not</em> applied to the sheet; transcribe later on desktop.</div></div></li>
+        <li class="item st-explore"><span class="glyph">💭</span><div class="body"><div class="name">Active Kata / Kiho</div><div class="desc">Track the one active Kata / Kiho and apply its modifiers; same overlay pattern.</div></div></li>
+        <li class="item st-explore"><span class="glyph">💭</span><div class="body"><div class="name">Monk tattoos (irezumi)</div><div class="desc">Track which tattoo abilities are active and apply their effects.</div></div></li>
+        <li class="item st-explore"><span class="glyph">💭</span><div class="body"><div class="name">Shadowlands Taint</div><div class="desc">Track the Taint rank as a session / persistent value.</div></div></li>
+      </ul>
+    </section>
+
+    <!-- Theme 2 -->
+    <section class="theme">
+      <div class="thead"><h3>2 · Table tools</h3><span class="rel">v1.2 dice · v1.3 combat</span></div>
+      <p class="why">Reduce the physical props at the table: a correct Roll&nbsp;&amp;&nbsp;Keep engine and
+         contextual rolls / combat tracking built on top of it.</p>
+      <div class="minibar" role="img" aria-label="4 done, 3 in progress, 1 planned, 3 exploratory">
+        <i class="done" style="width:36.4%"></i><i class="doing" style="width:27.3%"></i><i class="plan" style="width:9.1%"></i><i class="explore" style="width:27.2%"></i>
+      </div>
+      <ul class="items">
+        <li class="item st-done"><span class="glyph">✅</span><div class="body"><div class="name">Roll &amp; Keep engine</div><div class="desc">XkY, exploding tens, Ten Dice Rule, Void boost, unskilled rolls, dice-penalty rule. Shipped v0.2.0.</div></div></li>
+        <li class="item st-done"><span class="glyph">✅</span><div class="body"><div class="name">Stance selection</div><div class="desc">Attack / Full Attack / Defence / Full Defence / Center — adjusts derived values and feeds rolls.</div></div></li>
+        <li class="item st-doing"><span class="glyph">🔨</span><div class="body"><div class="name">Contextual rolls from the sheet</div><div class="desc">Tap a stat to roll the matching pool, pre-filled TN + wound penalty. Weapon attack/damage rolls have landed.</div></div></li>
+        <li class="item st-doing"><span class="glyph">🔨</span><div class="body"><div class="name">Combat tracker</div><div class="desc">Round structure, live Armor TN, action economy, spell countdown. Initiative + stance have landed.</div></div></li>
+        <li class="item st-done"><span class="glyph">✅</span><div class="body"><div class="name">Weapon selection</div><div class="desc">Equip toggle in the Equipment section drives the attack skill + damage roll, surfaced in the Combat tab with stance-adjusted pools.</div></div></li>
+        <li class="item st-doing"><span class="glyph">🔨</span><div class="body"><div class="name">Raises &amp; Free Raises</div><div class="desc">Raise stepper: called Raises +5 TN (capped at Void), Free Raises off-cap / −5 TN. Engine supports raises.</div></div></li>
+        <li class="item st-plan"><span class="glyph">🔜</span><div class="body"><div class="name">Skill Mastery abilities</div><div class="desc">Surface unlocked masteries (ranks 3/5/7) and auto-apply the ones touching rolls (Free Raises, flat bonuses).</div></div></li>
+        <li class="item st-done"><span class="glyph">✅</span><div class="body"><div class="name">Armor selection</div><div class="desc">Worn / removed toggle drops the armor's Armor TN + Reduction bonus, reflected live in the Combat tab (overlay, never rewrites the derived sheet).</div></div></li>
+        <li class="item st-explore"><span class="glyph">💭</span><div class="body"><div class="name">Maneuvers</div><div class="desc">Raise-cost table (Disarm, Feint, Knockdown, Called Shot…) folded into the attack roll's Raises.</div></div></li>
+        <li class="item st-explore"><span class="glyph">💭</span><div class="body"><div class="name">Iaijutsu duel</div><div class="desc">Guided 3-stage flow (Assessment → Focus → Strike) for the player's side.</div></div></li>
+        <li class="item st-explore"><span class="glyph">💭</span><div class="body"><div class="name">Grapple</div><div class="desc">Track the grappled state and its per-round contested Strength check.</div></div></li>
+      </ul>
+    </section>
+
+    <!-- Theme 3 -->
+    <section class="theme">
+      <div class="thead"><h3>3 · Sheet UI/UX refinements</h3><span class="rel">ongoing</span></div>
+      <p class="why">The sheet is the core surface; polish improves everyday table use.</p>
+      <div class="minibar" role="img" aria-label="3 planned, 1 exploratory">
+        <i class="plan" style="width:75%"></i><i class="explore" style="width:25%"></i>
+      </div>
+      <ul class="items">
+        <li class="item st-plan"><span class="glyph">🔜</span><div class="body"><div class="name">Navigation &amp; readability</div><div class="desc">Refine section layout, in-sheet navigation and information density for quick mid-game lookups.</div></div></li>
+        <li class="item st-plan"><span class="glyph">🔜</span><div class="body"><div class="name">Quick-reference tables</div><div class="desc">Standard TN, wound penalties, maneuver costs, stance effects, action economy, falling/drowning.</div></div></li>
+        <li class="item st-plan"><span class="glyph">🔜</span><div class="body"><div class="name">Bundled display fonts</div><div class="desc">Drop Cinzel / IM Fell English / EB Garamond TTFs into <code>res/font</code> and rewire the <code>FontFamily</code> vals.</div></div></li>
+        <li class="item st-explore"><span class="glyph">💭</span><div class="body"><div class="name">Clan theming polish</div><div class="desc">Extend the clan-accent treatment across more of the sheet.</div></div></li>
+      </ul>
+    </section>
+
+    <!-- Theme 4 -->
+    <section class="theme">
+      <div class="thead"><h3>4 · Rules engine depth</h3><span class="rel">exploratory</span></div>
+      <p class="why">Beyond v1's flat bonuses: evaluate datapack <code>ModifierDef</code> expressions and the
+         <em>situational</em> modifiers that never print on a static sheet. Two layers — static parity (A) vs
+         play-time extension (B).</p>
+      <div class="minibar" role="img" aria-label="5 exploratory">
+        <i class="explore" style="width:100%"></i>
+      </div>
+      <ul class="items">
+        <li class="item st-explore"><span class="glyph">💭</span><div class="body"><div class="name">Static-modifier parity (Layer A)</div><div class="desc">Grow <code>ModifierDef</code> evaluation feeding the derived sheet; desktop stays source of truth.</div></div></li>
+        <li class="item st-explore"><span class="glyph">💭</span><div class="body"><div class="name">Desktop-oracle parity tests</div><div class="desc">Golden tests across clans/schools/shugenja asserting derived numbers match the desktop.</div></div></li>
+        <li class="item st-explore"><span class="glyph">💭</span><div class="body"><div class="name">Modifier taxonomy</div><div class="desc">Classify every modifier auto / conditional / manual — the data both layers key off.</div></div></li>
+        <li class="item st-explore"><span class="glyph">💭</span><div class="body"><div class="name">Graceful degradation</div><div class="desc">Unevaluable modifiers become a toggle/prompt carrying the rule text — a checklist item, not a silent bug.</div></div></li>
+        <li class="item st-explore"><span class="glyph">💭</span><div class="body"><div class="name">Situational engine (Layer B)</div><div class="desc">Conditional evaluator grown by trigger category (stance, weapon, target, once-per-X, Void…).</div></div></li>
+      </ul>
+    </section>
+
+    <!-- Theme 5 -->
+    <section class="theme">
+      <div class="thead"><h3>5 · Multi-character &amp; campaigns</h3><span class="rel">after single-char solid</span></div>
+      <p class="why">Hold a library of imported characters and switch instantly, once the single-character
+         experience is solid.</p>
+      <div class="minibar" role="img" aria-label="6 planned">
+        <i class="plan" style="width:100%"></i>
+      </div>
+      <ul class="items">
+        <li class="item st-plan"><span class="glyph">🔜</span><div class="body"><div class="name">Character library</div><div class="desc">Registry of imported characters (replacing the single last-opened URI) with derived summaries.</div></div></li>
+        <li class="item st-plan"><span class="glyph">🔜</span><div class="body"><div class="name">Quick switcher</div><div class="desc">Pick the active character from a list; the sheet reflects it immediately.</div></div></li>
+        <li class="item st-plan"><span class="glyph">🔜</span><div class="body"><div class="name">Campaign / adventure grouping</div><div class="desc">Tag or group characters by campaign for players in multiple games.</div></div></li>
+        <li class="item st-plan"><span class="glyph">🔜</span><div class="body"><div class="name">Per-character datapack context</div><div class="desc">Remember which enabled packs a character was derived against; prompt on missing packs at switch.</div></div></li>
+        <li class="item st-plan"><span class="glyph">🔜</span><div class="body"><div class="name">Per-character session state</div><div class="desc">Generalise Theme 1's overlay so each character keeps its own wounds / Void / slots.</div></div></li>
+        <li class="item st-plan"><span class="glyph">🔜</span><div class="body"><div class="name">Manage entries</div><div class="desc">Rename, re-import/refresh from an updated <code>.l5r</code>, remove.</div></div></li>
+      </ul>
+    </section>
+
+    <!-- Theme 6 -->
+    <section class="theme">
+      <div class="thead"><h3>6 · Internationalisation</h3><span class="rel">exploratory</span></div>
+      <p class="why">The fastlane metadata tree already supports multiple locales.</p>
+      <div class="minibar" role="img" aria-label="1 exploratory">
+        <i class="explore" style="width:100%"></i>
+      </div>
+      <ul class="items">
+        <li class="item st-explore"><span class="glyph">💭</span><div class="body"><div class="name">i18n</div><div class="desc">Externalise UI strings and support additional locales.</div></div></li>
+      </ul>
+    </section>
+  </div><!-- /board -->
+
+  <!-- table view (accessibility / print) -->
+  <div id="tableview">
+    <table>
+      <thead><tr><th>Theme</th><th>Item</th><th>Status</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <footer>
+    <h4>Design principle — two modifier layers</h4>
+    <p><b>Layer A (derived sheet, static):</b> fixed bonuses that print on a sheet — must match the desktop
+       exactly, enforced by golden tests. <b>Layer B (play-time, situational):</b> conditional bonuses the
+       desktop doesn't model — the app's own extension; contract is <em>transparent &amp; overridable, never
+       silently wrong.</em> Layer B is additive on top of A and never rewrites parity-tested numbers.</p>
+    <h4>Considered but out of scope (for now)</h4>
+    <p>Bidirectional QR (re-export from the app) · multi-device / GM↔player session sync — revisitable once
+       session state lands.</p>
+    <p style="color:var(--muted)">Source: <code>docs/ROADMAP.md</code> + <code>main</code> git history · updated 2026-07-22 · read-only companion, advancement stays on the L5RCM desktop app.</p>
+  </footer>
+
+</div>
+
+<script>
+  // theme toggle
+  const themeBtn = document.getElementById('themeBtn');
+  themeBtn.addEventListener('click', () => {
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    document.documentElement.setAttribute('data-theme', dark ? 'light' : 'dark');
+    themeBtn.setAttribute('aria-pressed', String(!dark));
+    themeBtn.textContent = dark ? 'Dark' : 'Light';
+  });
+
+  // table view toggle — build rows from the board so the two views can't drift
+  const statusLabel = { 'st-done':'✅ Done', 'st-doing':'🔨 In progress', 'st-plan':'🔜 Planned', 'st-explore':'💭 Exploratory' };
+  const tbody = document.getElementById('tbody');
+  document.querySelectorAll('section.theme').forEach(sec => {
+    const theme = sec.querySelector('h3').textContent.trim();
+    sec.querySelectorAll('li.item').forEach(li => {
+      const cls = [...li.classList].find(c => c.startsWith('st-'));
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${theme}</td><td>${li.querySelector('.name').textContent}</td>`
+        + `<td class="stcell">${statusLabel[cls]}</td>`;
+      tbody.appendChild(tr);
+    });
+  });
+
+  const tableBtn = document.getElementById('tableBtn');
+  tableBtn.addEventListener('click', () => {
+    const on = document.getElementById('tableview').classList.toggle('on');
+    document.getElementById('board').classList.toggle('off', on);
+    tableBtn.setAttribute('aria-pressed', String(on));
+    tableBtn.textContent = on ? 'Board view' : 'Table view';
+  });
+</script>
+</body>
+</html>

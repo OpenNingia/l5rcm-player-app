@@ -63,6 +63,7 @@ fun SheetScreen(
     onSpendVoid: () -> Unit,
     onRegainVoid: () -> Unit,
     onEquipWeapon: (String?) -> Unit,
+    onToggleArmor: () -> Unit,
     onSetFullDefenseTotal: (Int) -> Unit,
     onCombatRoll: (DicePreset) -> Unit,
     onOpenLibrary: () -> Unit,
@@ -124,6 +125,7 @@ fun SheetScreen(
                         onSpendVoid = onSpendVoid,
                         onRegainVoid = onRegainVoid,
                         onEquipWeapon = onEquipWeapon,
+                        onToggleArmor = onToggleArmor,
                         onSetFullDefenseTotal = onSetFullDefenseTotal,
                         onCombatRoll = onCombatRoll,
                     )

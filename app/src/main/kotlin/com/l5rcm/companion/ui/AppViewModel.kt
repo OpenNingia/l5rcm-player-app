@@ -76,9 +76,10 @@ class AppViewModel @Inject constructor(
     val pendingDice: StateFlow<DicePreset?> = _pendingDice.asStateFlow()
 
     /**
-     * Play-time combat/session state: the overlay (wounds, Void, stance, equipped weapon, Full
-     * Defense) merged onto the derived baseline. Null until a character is loaded; a missing overlay
-     * row falls back to the baseline (full Void pool, Attack stance, no weapon equipped).
+     * Play-time combat/session state: the overlay (wounds, Void, stance, equipped weapon, armor
+     * worn, Full Defense) merged onto the derived baseline. Null until a character is loaded; a
+     * missing overlay row falls back to the baseline (full Void pool, Attack stance, no weapon
+     * equipped, armor worn).
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     val combat: StateFlow<CombatUiState?> = charContext
@@ -105,6 +106,7 @@ class AppViewModel @Inject constructor(
                         stance = stance,
                         equippedWeaponName = row?.equippedWeapon,
                         fullDefenseTotal = row?.fullDefenseTotal,
+                        armorEquipped = row?.armorEquipped ?: true,
                     )
                 }
             }
@@ -196,7 +198,7 @@ class AppViewModel @Inject constructor(
         viewModelScope.launch { characterRepo.rememberLast(null) }
     }
 
-    // --- Combat / session state (wounds · Void · stance · equipped weapon overlay) ---
+    // --- Combat / session state (wounds · Void · stance · equipped weapon · armor overlay) ---
 
     /** Apply [amount] wounds (e.g. from a damage roll). Clamped to `0..maxWounds`. */
     fun applyDamage(amount: Int) = mutate { it.copy(wounds = adjustWounds(it.wounds + amount)) }
@@ -248,6 +250,9 @@ class AppViewModel @Inject constructor(
     fun equipWeapon(name: String?) = mutate {
         it.copy(equippedWeapon = if (name == it.equippedWeapon) null else name)
     }
+
+    /** Toggle whether the character's armor is worn; when removed its Armor TN / RD bonus drops. */
+    fun toggleArmor() = mutate { it.copy(armorEquipped = !it.armorEquipped) }
 
     private fun adjustWounds(value: Int): Int =
         value.coerceIn(0, charContext.value?.health?.maxWounds ?: value)

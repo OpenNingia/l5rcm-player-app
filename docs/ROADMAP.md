@@ -37,7 +37,7 @@ Today the app tracks a **single** last-opened character (`AppPreferences` stores
 track this *without ever writing back* to the `.l5r`. All of the below is a local overlay, keyed
 per character, resettable to the derived baseline.
 
-- 🔨 **Room-backed session overlay** — the persistence layer for everything in this theme; never
+- ✅ **Room-backed session overlay** — the persistence layer for everything in this theme; never
   mutates the imported save. Landed with the wounds tracker: `data/session` (`SessionState` entity
   keyed per character `uuid`, DAO, `SessionDatabase`, `SessionRepository`), merged onto the derived
   baseline in `AppViewModel`. A missing row means "no overlay yet" → the baseline applies.
@@ -47,8 +47,8 @@ per character, resettable to the derived baseline.
   Down +40 · Out) via the pure `woundStatus()` (Layer B — no desktop oracle; RAW boundary = a rank
   holds until wounds *exceed* its capacity). Capacity = Earth×5 then Earth× the campaign multiplier
   (x2 default); rest-heal = 2×Stamina + Insight Rank per night.
-- 🔜 **Void points** — spend/regain against the pool (= Void Ring); one spend per round; refreshes on
-  daily rest.
+- ✅ **Void points** — spend/regain against the pool (= Void Ring); one spend per round; refreshes on
+  daily rest. In the Combat tab as a tappable pip track.
 - 🔜 **Spell slots** — per-element counters (= element Ring) plus the Void-Ring bonus slots; a failed
   cast still burns a slot.
 - 🔜 **Status conditions** — toggle the standard conditions (Blinded, Dazed, Entangled, Fatigued,
@@ -69,35 +69,37 @@ per character, resettable to the derived baseline.
 
 **Why.** Reduce the number of physical props at the table.
 
-- 🔜 **Roll & Keep engine (v1.2)** — the load-bearing primitive under everything else here. Port the
+- ✅ **Roll & Keep engine (v1.2)** — the load-bearing primitive under everything else here. Port the
   desktop's `drcore.py`: XkY roll-and-keep, **exploding tens**, the **Ten Dice Rule** (cap at 10
   dice, convert 2-rolled→1-kept, +2 beyond 10k10), **Void boost** (spend a point for +1k1), unskilled
   rolls (no explosion / no Raises), and the dice-penalty rule (kept never exceeds rolled). The Ten
   Dice Rule and the penalty rule are the easy-to-get-wrong pieces — unit-test them against the
   manual's worked examples.
-- 🔜 **Raises & Free Raises** — a Raise stepper on every roll: **called Raises** each add +5 to the
+- 🔨 **Raises & Free Raises** — a Raise stepper on every roll: **called Raises** each add +5 to the
   TN (capped at the Void Ring) and, if met, improve the result; **Free Raises** (granted by mastery
   abilities, techniques, kata…) do *not* count toward the cap and may instead reduce the TN by 5.
   Show the effective TN live, and fail the roll if a declared Raise's TN isn't met.
 - 🔜 **Skill Mastery Abilities** — surface the mastery abilities the character has unlocked (skill
   ranks 3/5/7) and apply the ones that touch rolls — most commonly **Free Raises** and flat
   roll/damage bonuses — to the matching contextual rolls automatically.
-- 🔜 **Contextual rolls from the sheet** — tap a roll affordance next to a stat and the app rolls the
+- 🔨 **Contextual rolls from the sheet** — tap a roll affordance next to a stat and the app rolls the
   matching pool automatically, pre-filling pool and TN from the deriver, and auto-applying the
   current wound penalty. Covers: **Skill** (Trait+Skill k Trait), **Trait / Ring**, **Spell**
   (Ring+School Rank, TN = 5 + 5×Mastery Level), **Attack** (vs target Armor TN; −10 for ranged into
   melee), **Damage** (+Strength; bows use their own Strength; not boostable by Void), **Initiative**,
   **contested** rolls, and **Fear resistance** (Raw Willpower vs 5 + 5×Fear Rank, +Honor Rank).
-- 🔜 **Combat tracker (v1.3)** — round structure (Initiative → Turns → Reactions) and turn tracking
+- 🔨 **Combat tracker (v1.3)** — round structure (Initiative → Turns → Reactions) and turn tracking
   for the player's own character; live **Armor TN** ("TN to be hit" = Reflexes×5+5 + armor + stance /
   condition modifiers); action economy reference (1 Complex or 2 Simple + Free; move = Water×5/10/20
   ft); multi-round **spell casting countdown** (Complex actions = Mastery Level).
-- 🔜 **Weapon selection** — pick the weapon used to attack from the character's equipment; it drives
-  the attack roll's **skill** (e.g. Kenjutsu for a katana) and the **damage roll** (DR + Strength,
-  or the bow's own Strength), so the contextual attack/damage rolls above are pre-filled correctly.
-- 🔜 **Armor selection** — choose the equipped armor (or **no armor**); feeds the armor bonus into
-  the live Armor TN.
-- 🔜 **Stance selection** — set the character's combat stance (Attack, Full Attack, Defence,
+- ✅ **Weapon selection** — pick the weapon used to attack from the character's equipment (Equip
+  toggle in the Equipment section); it drives the attack roll's **skill** (e.g. Kenjutsu for a katana)
+  and the **damage roll** (DR + Strength, or the bow's own Strength), surfaced in the Combat tab's
+  Equipped Weapon panel with stance-adjusted pools.
+- ✅ **Armor selection** — the `.l5r` carries a single armor; a **worn / removed** toggle in the
+  Equipment section drops its Armor TN + Reduction bonus, reflected live in the Combat tab (Layer B
+  overlay — the derived Character sheet always shows the armored baseline).
+- ✅ **Stance selection** — set the character's combat stance (Attack, Full Attack, Defence,
   Full Defence, Center); the choice adjusts the affected derived values and feeds the rolls above.
   E.g. Full Attack +2k1 attack / Armor TN −10; Full Defence adds half a Defence/Reflexes roll to
   Armor TN; Center skips the round for +1k1 and +10 Initiative next round.
