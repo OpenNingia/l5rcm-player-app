@@ -13,9 +13,11 @@ import com.l5rcm.companion.data.session.SessionRepository
 import com.l5rcm.companion.data.session.SessionState
 import com.l5rcm.companion.domain.model.CharacterView
 import com.l5rcm.companion.domain.model.HealthView
+import com.l5rcm.companion.domain.model.Ring
 import com.l5rcm.companion.domain.rules.CharacterDeriver
 import com.l5rcm.companion.domain.rules.Stance
 import com.l5rcm.companion.domain.rules.StanceRules
+import com.l5rcm.companion.domain.rules.spellSlots
 import com.l5rcm.companion.domain.rules.woundStatus
 import com.l5rcm.companion.ui.dice.DicePreset
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -56,13 +58,16 @@ class AppViewModel @Inject constructor(
     /**
      * The loaded character's derived baseline needed by the session overlay: stable [uuid], the
      * [health] baseline, plus [voidRank]/[defenseRank] for clamping the Void pool and gating the
-     * defensive stances.
+     * defensive stances. [elementRanks]/[hasSpells] size the daily spell-slot pools (only shugenja
+     * — characters with spells — get them).
      */
     private data class CharContext(
         val uuid: String,
         val health: HealthView,
         val voidRank: Int,
         val defenseRank: Int,
+        val elementRanks: Map<Ring, Int>,
+        val hasSpells: Boolean,
     )
 
     private val charContext = MutableStateFlow<CharContext?>(null)
@@ -96,6 +101,21 @@ class AppViewModel @Inject constructor(
                     val stance = row?.stance?.let { runCatching { Stance.valueOf(it) }.getOrNull() }
                         ?.takeIf { StanceRules.canUse(it, ctx.defenseRank) }
                         ?: Stance.ATTACK
+                    val slots = if (ctx.hasSpells) {
+                        spellSlots(
+                            elementRanks = ctx.elementRanks,
+                            voidRank = ctx.voidRank,
+                            spent = mapOf(
+                                Ring.EARTH to (row?.spellEarthSpent ?: 0),
+                                Ring.AIR to (row?.spellAirSpent ?: 0),
+                                Ring.WATER to (row?.spellWaterSpent ?: 0),
+                                Ring.FIRE to (row?.spellFireSpent ?: 0),
+                                Ring.VOID to (row?.spellVoidSpent ?: 0),
+                            ),
+                        )
+                    } else {
+                        emptyList()
+                    }
                     CombatUiState(
                         currentWounds = current,
                         maxWounds = ctx.health.maxWounds,
@@ -107,6 +127,7 @@ class AppViewModel @Inject constructor(
                         equippedWeaponName = row?.equippedWeapon,
                         fullDefenseTotal = row?.fullDefenseTotal,
                         armorEquipped = row?.armorEquipped ?: true,
+                        spellSlots = slots,
                     )
                 }
             }
@@ -175,7 +196,14 @@ class AppViewModel @Inject constructor(
             val packs = datapackRepo.loadEnabledSet()
             val view = CharacterDeriver.derive(save, packs)
             charContext.value = pendingUuid?.let {
-                CharContext(it, view.health, view.voidRank, defenseRankOf(view))
+                CharContext(
+                    uuid = it,
+                    health = view.health,
+                    voidRank = view.voidRank,
+                    defenseRank = defenseRankOf(view),
+                    elementRanks = view.rings.associate { r -> r.ring to r.rank },
+                    hasSpells = view.spells.known.isNotEmpty() || view.spells.memorized.isNotEmpty(),
+                )
             }
             _character.value = CharacterUiState.Ready(view)
         }
@@ -207,12 +235,23 @@ class AppViewModel @Inject constructor(
     fun applyHeal(amount: Int) = mutate { it.copy(wounds = adjustWounds(it.wounds - amount)) }
 
     /**
-     * A night's rest: heal the character's heal rate (2×Stamina + Insight Rank) and refresh the
-     * Void pool to full (Void refreshes on a daily rest, rulebook p. 78).
+     * A night's rest: heal the character's heal rate (2×Stamina + Insight Rank), refresh the Void
+     * pool to full (Void refreshes on a daily rest, rulebook p. 78) and restore every daily spell
+     * slot (the sunrise refresh, p. 166).
      */
     fun rest() {
         val rate = charContext.value?.health?.healRate ?: return
-        mutate { it.copy(wounds = adjustWounds(it.wounds - rate), voidSpent = 0) }
+        mutate {
+            it.copy(
+                wounds = adjustWounds(it.wounds - rate),
+                voidSpent = 0,
+                spellEarthSpent = 0,
+                spellAirSpent = 0,
+                spellWaterSpent = 0,
+                spellFireSpent = 0,
+                spellVoidSpent = 0,
+            )
+        }
     }
 
     /** Revert wounds to the imported/derived baseline, leaving Void/stance/weapon untouched. */
@@ -253,6 +292,33 @@ class AppViewModel @Inject constructor(
 
     /** Toggle whether the character's armor is worn; when removed its Armor TN / RD bonus drops. */
     fun toggleArmor() = mutate { it.copy(armorEquipped = !it.armorEquipped) }
+
+    /**
+     * Burn ([delta] = +1) or reclaim ([delta] = −1) one spell slot from [ring]'s pool (Void = the
+     * flexible bonus pool). Clamped to `0..capacity`; a no-op when the character has no such pool.
+     */
+    fun adjustSpellSlot(ring: Ring, delta: Int) {
+        val ctx = charContext.value ?: return
+        val max = if (ring == Ring.VOID) ctx.voidRank else (ctx.elementRanks[ring] ?: 0)
+        if (max <= 0) return
+        mutate { it.withSpellSpent(ring, (it.spellSpent(ring) + delta).coerceIn(0, max)) }
+    }
+
+    private fun SessionState.spellSpent(ring: Ring): Int = when (ring) {
+        Ring.EARTH -> spellEarthSpent
+        Ring.AIR -> spellAirSpent
+        Ring.WATER -> spellWaterSpent
+        Ring.FIRE -> spellFireSpent
+        Ring.VOID -> spellVoidSpent
+    }
+
+    private fun SessionState.withSpellSpent(ring: Ring, value: Int): SessionState = when (ring) {
+        Ring.EARTH -> copy(spellEarthSpent = value)
+        Ring.AIR -> copy(spellAirSpent = value)
+        Ring.WATER -> copy(spellWaterSpent = value)
+        Ring.FIRE -> copy(spellFireSpent = value)
+        Ring.VOID -> copy(spellVoidSpent = value)
+    }
 
     private fun adjustWounds(value: Int): Int =
         value.coerceIn(0, charContext.value?.health?.maxWounds ?: value)

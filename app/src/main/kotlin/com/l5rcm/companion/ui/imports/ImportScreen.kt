@@ -64,6 +64,7 @@ fun ImportRouter(
                 onEquipWeapon = viewModel::equipWeapon,
                 onToggleArmor = viewModel::toggleArmor,
                 onSetFullDefenseTotal = viewModel::setFullDefenseTotal,
+                onSpellSlot = viewModel::adjustSpellSlot,
                 onCombatRoll = onCombatRoll,
                 onOpenLibrary = onOpenLibrary,
                 onImport = openPicker,

@@ -12,7 +12,7 @@ import androidx.room.PrimaryKey
  * For wounds, [wounds] is the *absolute* current wounds taken once the player has touched it —
  * the first write to any field seeds the row from the derived baseline (see AppViewModel.mutate),
  * so setting a stance or spending Void never silently zeroes the tracked wounds.
- * Fields will grow as later Theme-1 pieces land (spell slots, conditions).
+ * Fields will grow as later Theme-1 pieces land (status conditions, session notes).
  */
 @Entity(tableName = "session_state")
 data class SessionState(
@@ -28,4 +28,14 @@ data class SessionState(
     val fullDefenseTotal: Int? = null,
     /** Whether the character's armor is worn; false = fighting unarmored, dropping its Armor TN / RD bonus. */
     val armorEquipped: Boolean = true,
+    /**
+     * Daily spell slots burned per element pool (RAW p.166): capacity = that element Ring. A failed
+     * Spell Casting Roll still burns a slot. Refreshed to 0 on a daily rest.
+     */
+    val spellEarthSpent: Int = 0,
+    val spellAirSpent: Int = 0,
+    val spellWaterSpent: Int = 0,
+    val spellFireSpent: Int = 0,
+    /** Flexible bonus spell slots burned (capacity = Void Ring); usable for any element. */
+    val spellVoidSpent: Int = 0,
 )

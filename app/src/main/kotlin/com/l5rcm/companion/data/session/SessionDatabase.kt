@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  * Room store for the per-character session overlay. `exportSchema = false` — schema history is
  * tracked by hand-written [Migration]s (the overlay is small, resettable play state).
  */
-@Database(entities = [SessionState::class], version = 3, exportSchema = false)
+@Database(entities = [SessionState::class], version = 4, exportSchema = false)
 abstract class SessionDatabase : RoomDatabase() {
     abstract fun sessionStateDao(): SessionStateDao
 
@@ -28,6 +28,17 @@ abstract class SessionDatabase : RoomDatabase() {
         val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE session_state ADD COLUMN armorEquipped INTEGER NOT NULL DEFAULT 1")
+            }
+        }
+
+        /** v3 → v4: add per-element daily spell slots + the flexible Void pool (all start unspent). */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE session_state ADD COLUMN spellEarthSpent INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE session_state ADD COLUMN spellAirSpent INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE session_state ADD COLUMN spellWaterSpent INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE session_state ADD COLUMN spellFireSpent INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE session_state ADD COLUMN spellVoidSpent INTEGER NOT NULL DEFAULT 0")
             }
         }
     }

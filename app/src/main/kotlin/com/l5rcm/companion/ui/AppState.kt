@@ -4,6 +4,7 @@ import com.l5rcm.companion.data.catalog.CatalogEntry
 import com.l5rcm.companion.data.save.PackRef
 import com.l5rcm.companion.data.repository.InstalledPack
 import com.l5rcm.companion.domain.model.CharacterView
+import com.l5rcm.companion.domain.rules.SpellSlot
 import com.l5rcm.companion.domain.rules.Stance
 import com.l5rcm.companion.domain.rules.WoundStatus
 
@@ -39,6 +40,8 @@ data class CombatUiState(
     val fullDefenseTotal: Int?,
     /** Whether the character's armor is worn; when false its Armor TN / RD bonus is dropped. */
     val armorEquipped: Boolean,
+    /** Daily spell-slot pools (element pools + the flexible Void pool); empty for non-shugenja. */
+    val spellSlots: List<SpellSlot> = emptyList(),
 )
 
 /** State of the datapack Library (catalog + installed registry). */
