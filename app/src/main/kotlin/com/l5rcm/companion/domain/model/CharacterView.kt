@@ -12,12 +12,18 @@ data class CharacterView(
     val clanName: String?,
     val familyName: String?,
     val schoolName: String?,
+    /** Trait id (e.g. "strength") the family grants its +1 to, if any — shown as a bonus badge. */
+    val familyBonusTrait: String?,
+    /** Trait id the (first) school grants its +1 to, if any — shown as a bonus badge. */
+    val schoolBonusTrait: String?,
 
     val traits: List<TraitView>,
     val rings: List<RingView>,
     val voidRank: Int,
     val insightRank: Int,
     val insightValue: Int,
+    /** Insight value at which the next rank is reached — drives the progression bar. */
+    val insightNextThreshold: Int,
 
     val honor: Double,
     val glory: Double,
