@@ -10,6 +10,8 @@ import com.l5rcm.companion.data.repository.AppPreferences
 import com.l5rcm.companion.data.repository.CharacterRepository
 import com.l5rcm.companion.data.repository.DatapackRepository
 import com.l5rcm.companion.data.session.SessionDatabase
+import com.l5rcm.companion.data.session.SessionNoteDao
+import com.l5rcm.companion.data.session.SessionNotesRepository
 import com.l5rcm.companion.data.session.SessionRepository
 import com.l5rcm.companion.data.session.SessionStateDao
 import dagger.Module
@@ -82,6 +84,7 @@ object AppModule {
                 SessionDatabase.MIGRATION_1_2,
                 SessionDatabase.MIGRATION_2_3,
                 SessionDatabase.MIGRATION_3_4,
+                SessionDatabase.MIGRATION_4_5,
             )
             .build()
 
@@ -92,4 +95,13 @@ object AppModule {
     @Provides
     @Singleton
     fun provideSessionRepository(dao: SessionStateDao): SessionRepository = SessionRepository(dao)
+
+    @Provides
+    @Singleton
+    fun provideSessionNoteDao(db: SessionDatabase): SessionNoteDao = db.sessionNoteDao()
+
+    @Provides
+    @Singleton
+    fun provideSessionNotesRepository(dao: SessionNoteDao): SessionNotesRepository =
+        SessionNotesRepository(dao)
 }

@@ -61,10 +61,14 @@ per character, resettable to the derived baseline.
     derived, so a first pass could apply the flat ±1 before a full modifier engine (Theme 4) lands.
 - 🔜 **Status conditions** — toggle the standard conditions (Blinded, Dazed, Entangled, Fatigued,
   Grappled, Prone, Stunned, Fear) and apply their roll/Armor-TN effects; expose their recovery rolls.
-- 🔜 **Session notes** — free-form per-character notes for things earned during play that the app
-  deliberately does *not* apply to the sheet: **XP gained**, **loot / new equipment**, plot notes.
-  These are the player's worklist to later transcribe into the L5RCM desktop app (which stays the
-  system of record for advancement).
+- ✅ **Session notes** — a per-character **play-session log** in the **Notes** tab: an email-style
+  list of sessions, each identified by a date + running counter ("16 giugno 2026 — Session #1"),
+  with add / edit / delete (tap a row to edit its body, ✚ to start a new session). The body is the
+  player's worklist for things the app deliberately does *not* apply to the sheet — **XP gained**,
+  **loot / new equipment**, plot notes — to later transcribe into the L5RCM desktop app (which stays
+  the system of record for advancement). Room-backed (`SessionNote` entity, one-to-many per character
+  `uuid`); never writes the `.l5r`. This replaced the old read-only page that echoed the imported
+  character's `.l5r` notes.
 - 💭 **Active Kata / Kiho** — track the currently-active Kata (one at a time) / Kiho and apply their
   modifiers; same overlay pattern as conditions.
 - 💭 **Monk tattoos (irezumi)** — for tattooed monks, track which tattoo abilities are active and

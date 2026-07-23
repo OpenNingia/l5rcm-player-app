@@ -1,6 +1,5 @@
 package com.l5rcm.companion.ui.sheet
 
-import android.widget.TextView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -29,8 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.text.HtmlCompat
+import com.l5rcm.companion.data.session.SessionNote
 import com.l5rcm.companion.domain.dice.RollConfig
 import com.l5rcm.companion.domain.dice.RollMode
 import com.l5rcm.companion.domain.dice.RollType
@@ -74,6 +72,9 @@ fun SectionContent(
     onSetFullDefenseTotal: (Int) -> Unit,
     onSpellSlot: (Ring, Int) -> Unit,
     onCombatRoll: (DicePreset) -> Unit,
+    notes: List<SessionNote>,
+    onSaveNote: (Long, Long, String) -> Unit,
+    onDeleteNote: (Long) -> Unit,
 ) {
     SectionHeader(section.title, section.kanji)
     when (section) {
@@ -91,7 +92,7 @@ fun SectionContent(
             view, combat?.equippedWeaponName, combat?.armorEquipped ?: true, onEquipWeapon, onToggleArmor,
         )
         SheetSection.MODIFIERS -> ModifiersSection(view)
-        SheetSection.NOTES -> NotesSection(view)
+        SheetSection.NOTES -> NotesSection(notes, onSaveNote, onDeleteNote)
         SheetSection.ABOUT -> AboutSection(view)
     }
 }
@@ -939,25 +940,190 @@ private fun ModifiersSection(view: CharacterView) {
     }
 }
 
+/**
+ * **Session notes** — the player's per-session play log (Theme 1): an email-style list of sessions,
+ * each identified by a date and a running counter ("16 giugno 2026 — Session #1"). Tapping a row
+ * opens it for editing; the ✚ header action starts a new session. The body is the worklist (XP,
+ * loot, plot) to transcribe into L5RCM later — deliberately *not* the imported character description,
+ * and never written back to the `.l5r`.
+ */
 @Composable
-private fun NotesSection(view: CharacterView) {
-    if (view.notesHtml.isBlank()) { EmptyNote("No notes."); return }
-    SheetPanel("Notes") {
-        val inkArgb = android.graphics.Color.rgb(0x2C, 0x1A, 0x0E) // --color-ink
-        AndroidView(
-            modifier = Modifier.fillMaxWidth(),
-            factory = { ctx ->
-                TextView(ctx).apply {
-                    textSize = 14f
-                    setTextColor(inkArgb)
+private fun NotesSection(
+    notes: List<SessionNote>,
+    onSaveNote: (Long, Long, String) -> Unit,
+    onDeleteNote: (Long) -> Unit,
+) {
+    val colors = L5RTheme.colors
+    // The note currently open in the editor: an existing one, or a fresh draft when "add" is tapped.
+    var editing by remember { mutableStateOf<SessionNoteDraft?>(null) }
+    val nextNumber = (notes.maxOfOrNull { it.number } ?: 0) + 1
+
+    SheetPanel("Session Notes") {
+        Text(
+            "Your play-session log — XP, loot and plot to transcribe into L5RCM later. " +
+                "Not part of the character sheet; never saved to your .l5r.",
+            style = L5RTheme.type.caption.copy(color = colors.inkMuted),
+            modifier = Modifier.padding(bottom = Spacing.s3),
+        )
+        WoundActionButton(
+            "✚  New session",
+            colors.accentPrimary,
+            colors.whiteWash,
+            Modifier.fillMaxWidth(),
+            onClick = { editing = SessionNoteDraft(number = nextNumber, date = System.currentTimeMillis()) },
+        )
+        if (notes.isEmpty()) {
+            Box(Modifier.fillMaxWidth().padding(vertical = Spacing.s4), contentAlignment = Alignment.Center) {
+                Text(
+                    "No sessions logged yet.",
+                    style = L5RTheme.type.body.copy(color = colors.inkMuted),
+                )
+            }
+        } else {
+            Column(Modifier.padding(top = Spacing.s2)) {
+                notes.forEachIndexed { index, note ->
+                    if (index > 0) PlainRule()
+                    SessionNoteRow(note) {
+                        editing = SessionNoteDraft(note.id, note.number, note.date, note.body)
+                    }
                 }
-            },
-            update = { tv ->
-                tv.text = HtmlCompat.fromHtml(view.notesHtml, HtmlCompat.FROM_HTML_MODE_COMPACT)
+            }
+        }
+    }
+
+    editing?.let { draft ->
+        SessionNoteEditor(
+            draft = draft,
+            onDismiss = { editing = null },
+            onSave = { date, body -> onSaveNote(draft.id, date, body); editing = null },
+            onDelete = if (draft.id != 0L) {
+                { onDeleteNote(draft.id); editing = null }
+            } else {
+                null
             },
         )
     }
 }
+
+/** In-flight editor state for a session note (a persisted note, or a fresh draft with id = 0). */
+private data class SessionNoteDraft(
+    val id: Long = 0,
+    val number: Int,
+    val date: Long,
+    val body: String = "",
+)
+
+/** One row in the email-style session list: "date — Session #n" over a one-line body preview. */
+@Composable
+private fun SessionNoteRow(note: SessionNote, onClick: () -> Unit) {
+    val colors = L5RTheme.colors
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(Radii.input)
+            .clickable(onClick = onClick)
+            .padding(vertical = Spacing.s2, horizontal = Spacing.s1),
+    ) {
+        Text(
+            "${formatNoteDate(note.date)} — Session #${note.number}",
+            style = L5RTheme.type.label.copy(color = colors.ink),
+        )
+        val preview = note.body.lineSequence().firstOrNull { it.isNotBlank() }?.trim().orEmpty()
+        Text(
+            preview.ifBlank { "(empty)" },
+            style = L5RTheme.type.body.copy(color = colors.inkMuted),
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/** Add/edit dialog for a single session note: a date the player can change, plus the free-form body. */
+@Composable
+private fun SessionNoteEditor(
+    draft: SessionNoteDraft,
+    onDismiss: () -> Unit,
+    onSave: (Long, String) -> Unit,
+    onDelete: (() -> Unit)?,
+) {
+    val colors = L5RTheme.colors
+    var body by remember { mutableStateOf(draft.body) }
+    var date by remember { mutableStateOf(draft.date) }
+    var pickingDate by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = colors.paper,
+        title = { Text("Session #${draft.number}", style = L5RTheme.type.heading2.copy(color = colors.ink)) },
+        text = {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        formatNoteDate(date),
+                        style = L5RTheme.type.body.copy(color = colors.ink),
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = { pickingDate = true }) { Text("CHANGE DATE") }
+                }
+                OutlinedTextField(
+                    value = body,
+                    onValueChange = { body = it },
+                    modifier = Modifier.fillMaxWidth().padding(top = Spacing.s2),
+                    minLines = 6,
+                    textStyle = L5RTheme.type.body.copy(color = colors.ink),
+                    placeholder = {
+                        Text(
+                            "e.g. +3 XP · looted a fine katana · owe a favour to Kakita Ren",
+                            style = L5RTheme.type.body.copy(color = colors.inkFaint),
+                        )
+                    },
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Text,
+                        imeAction = ImeAction.Default,
+                    ),
+                )
+            }
+        },
+        confirmButton = { TextButton(onClick = { onSave(date, body) }) { Text("SAVE") } },
+        dismissButton = {
+            Row {
+                if (onDelete != null) {
+                    TextButton(onClick = onDelete) {
+                        Text("DELETE", color = colors.accentCrimson)
+                    }
+                }
+                TextButton(onClick = onDismiss) { Text("CANCEL") }
+            }
+        },
+    )
+
+    if (pickingDate) {
+        NoteDatePicker(
+            initial = date,
+            onDismiss = { pickingDate = false },
+            onPicked = { date = it; pickingDate = false },
+        )
+    }
+}
+
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun NoteDatePicker(initial: Long, onDismiss: () -> Unit, onPicked: (Long) -> Unit) {
+    val state = androidx.compose.material3.rememberDatePickerState(initialSelectedDateMillis = initial)
+    androidx.compose.material3.DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = { onPicked(state.selectedDateMillis ?: initial) }) { Text("OK") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("CANCEL") } },
+    ) {
+        androidx.compose.material3.DatePicker(state = state)
+    }
+}
+
+/** Locale-aware calendar-day label (on an Italian device: "16 giugno 2026"). */
+private fun formatNoteDate(millis: Long): String =
+    java.text.SimpleDateFormat("d MMMM yyyy", java.util.Locale.getDefault()).format(java.util.Date(millis))
 
 @Composable
 private fun AboutSection(view: CharacterView) {

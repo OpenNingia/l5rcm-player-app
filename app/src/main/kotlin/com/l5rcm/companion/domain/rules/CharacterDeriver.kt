@@ -235,7 +235,6 @@ object CharacterDeriver {
                     save.money.getOrElse(2) { 0 },
                 ),
                 properties = save.properties,
-                notesHtml = save.extra_notes,
                 packRefs = save.pack_refs.map {
                     PackRefView(it.id, it.name, it.version, installed = it.id in packs.packIds)
                 },

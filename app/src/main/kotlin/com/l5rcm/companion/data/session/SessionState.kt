@@ -12,7 +12,7 @@ import androidx.room.PrimaryKey
  * For wounds, [wounds] is the *absolute* current wounds taken once the player has touched it —
  * the first write to any field seeds the row from the derived baseline (see AppViewModel.mutate),
  * so setting a stance or spending Void never silently zeroes the tracked wounds.
- * Fields will grow as later Theme-1 pieces land (status conditions, session notes).
+ * Fields will grow as later Theme-1 pieces land (status conditions).
  */
 @Entity(tableName = "session_state")
 data class SessionState(
