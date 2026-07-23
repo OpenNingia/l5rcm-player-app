@@ -484,7 +484,7 @@ private fun CombatSection(
                         rolled = (defenseRank + reflexes).coerceAtLeast(1),
                         kept = reflexes.coerceAtLeast(1),
                     ),
-                    "Difesa Totale — Difesa/Reflessi",
+                    "Full Defense — Defense/Reflexes",
                 ),
             )
         },
@@ -505,7 +505,7 @@ private fun CombatSection(
                         rolled = w.attackRolled + bonusRolled,
                         kept = w.attackKept + bonusKept,
                     ),
-                    "Attacco — ${w.name}",
+                    "Attack — ${w.name}",
                 ),
             )
         },
@@ -518,7 +518,7 @@ private fun CombatSection(
                         rolled = w.damageRolled,
                         kept = w.damageKept,
                     ),
-                    "Danno — ${w.name}",
+                    "Damage — ${w.name}",
                 ),
             )
         },
@@ -541,7 +541,7 @@ private fun CombatSection(
                         rolled = view.combat.initiativeRoll,
                         kept = view.combat.initiativeKeep,
                     ),
-                    "Iniziativa",
+                    "Initiative",
                 ),
             )
         }
@@ -1180,8 +1180,7 @@ private fun NotesSection(
 
     SheetPanel("Session Notes") {
         Text(
-            "Your play-session log — XP, loot and plot to transcribe into L5RCM later. " +
-                "Not part of the character sheet; never saved to your .l5r.",
+            "Your play-session log — XP, loot and plot to transcribe into L5RCM later.",
             style = L5RTheme.type.caption.copy(color = colors.inkMuted),
             modifier = Modifier.padding(bottom = Spacing.s3),
         )

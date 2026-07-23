@@ -23,16 +23,16 @@ import com.l5rcm.companion.ui.theme.L5RTheme
 import com.l5rcm.companion.ui.theme.Spacing
 
 private fun KeypadField.title(): String = when (this) {
-    KeypadField.ROLLED -> "Dadi tirati"
-    KeypadField.KEPT -> "Dadi tenuti"
+    KeypadField.ROLLED -> "Rolled dice"
+    KeypadField.KEPT -> "Kept dice"
     KeypadField.BONUS -> "Bonus"
     KeypadField.TN -> "Target Number"
 }
 
 private fun KeypadField.hint(): String = when (this) {
     KeypadField.ROLLED -> "1–10"
-    KeypadField.KEPT -> "1–dadi tirati"
-    KeypadField.BONUS -> "0–50, con segno ±"
+    KeypadField.KEPT -> "1–rolled dice"
+    KeypadField.BONUS -> "0–50, signed ±"
     KeypadField.TN -> "5–120"
 }
 

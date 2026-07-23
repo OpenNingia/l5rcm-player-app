@@ -120,7 +120,7 @@ fun ResultCard(effective: EffectiveRoll, result: RollResult, mode: RollMode, mod
                 scaleY = pop.value
             },
         )
-        SectionLabel("Totale")
+        SectionLabel("Total")
 
         if (kept.isNotEmpty()) {
             FlowRow(
@@ -132,7 +132,7 @@ fun ResultCard(effective: EffectiveRoll, result: RollResult, mode: RollMode, mod
             }
         }
         if (discarded.isNotEmpty()) {
-            SectionLabel("Scartati")
+            SectionLabel("Discarded")
             FlowRow(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.s1, Alignment.CenterHorizontally),
@@ -169,7 +169,7 @@ private const val REVEAL_STAGGER_MS = 80L
 private fun ResultBanner(effective: EffectiveRoll, result: RollResult, mode: RollMode) {
     val colors = L5RTheme.colors
     if (mode == RollMode.OPEN) {
-        Text("TIRO APERTO", style = DiceType.rollHeader.copy(color = colors.inkMuted))
+        Text("OPEN ROLL", style = DiceType.rollHeader.copy(color = colors.inkMuted))
         return
     }
     val success = result.total >= effective.effTn
@@ -183,7 +183,7 @@ private fun ResultBanner(effective: EffectiveRoll, result: RollResult, mode: Rol
             .padding(vertical = Spacing.s2),
         contentAlignment = Alignment.Center,
     ) {
-        val verdict = if (success) "SUCCESSO" else "FALLIMENTO"
+        val verdict = if (success) "SUCCESS" else "FAILURE"
         Text("$verdict · TN ${effective.effTn}", style = DiceType.button.copy(color = fg))
     }
 }
@@ -264,9 +264,9 @@ fun HistorySection(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            SectionLabel("Storico")
+            SectionLabel("History")
             Text(
-                "SVUOTA",
+                "CLEAR",
                 style = DiceType.sectionLabel.copy(color = colors.accentCrimson),
                 modifier = Modifier.clickable(onClick = onClear),
             )
@@ -294,11 +294,11 @@ private fun HistoryRow(entry: HistoryEntry, onRestore: (HistoryEntry) -> Unit) {
     }
 
     val flags = buildList {
-        if (entry.config.voidSpent) add("Vuoto")
-        if (!eff.effSkilled) add("Inesperto")
-        if (eff.emphasis) add("Enfasi")
-        add(if (open) "Aperto" else "TN ${eff.effTn}")
-        add("tenuti ${entry.result.kept.joinToString(", ")}")
+        if (entry.config.voidSpent) add("Void")
+        if (!eff.effSkilled) add("Unskilled")
+        if (eff.emphasis) add("Emphasis")
+        add(if (open) "Open" else "TN ${eff.effTn}")
+        add("kept ${entry.result.kept.joinToString(", ")}")
     }.joinToString(" · ")
 
     Row(
