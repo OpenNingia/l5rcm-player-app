@@ -14,26 +14,26 @@ enum class Stance(
     val isDefensive: Boolean = false,
 ) {
     ATTACK(
-        "Attacco",
-        "Nessuna restrizione.",
+        "Attack",
+        "No restrictions.",
     ),
     FULL_ATTACK(
-        "Attacco Totale",
-        "+2k1 ai tiri d'attacco, Armor TN −10. Solo azioni d'attacco/avvicinamento, mischia.",
+        "Full Attack",
+        "+2k1 to attack rolls, Armor TN −10. Attack/approach actions only, melee.",
     ),
     DEFENSE(
-        "Difesa",
-        "Armor TN +Anello Aria +grado Difesa. Non puoi attaccare.",
+        "Defense",
+        "Armor TN +Air Ring +Defense rank. May not attack.",
         isDefensive = true,
     ),
     FULL_DEFENSE(
-        "Difesa Totale",
-        "Tira Difesa/Reflessi: aggiungi metà del totale (arrotonda su) all'Armor TN fino al prossimo turno.",
+        "Full Defense",
+        "Roll Defense/Reflexes: add half the total (round up) to Armor TN until next turn.",
         isDefensive = true,
     ),
     CENTER(
-        "Centrato",
-        "Nessuna azione questo round; il prossimo +1k1+Anello Vuoto a un tiro e +10 Iniziativa.",
+        "Center",
+        "No actions this round; next round +1k1+Void Ring on one roll and +10 Initiative.",
     ),
 }
 

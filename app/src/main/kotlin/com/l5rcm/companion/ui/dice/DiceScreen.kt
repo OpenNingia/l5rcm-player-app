@@ -93,7 +93,7 @@ fun DiceScreen(
                     SkilledControl(cfg.skilled, viewModel::setSkilled)
                     if (cfg.skilled) {
                         ToggleBar(
-                            label = if (cfg.emphasisToggle) "✦ Enfasi attiva" else "✦ Enfasi — ritira gli 1",
+                            label = if (cfg.emphasisToggle) "✦ Emphasis active" else "✦ Emphasis — reroll 1s",
                             active = cfg.emphasisToggle,
                             onClick = viewModel::toggleEmphasis,
                             activeBg = L5RTheme.colors.accentGold,
@@ -105,8 +105,8 @@ fun DiceScreen(
                 HeroNotation(state)
 
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s3)) {
-                    ConfigTile("Dadi", "${cfg.rolled}") { viewModel.openKeypad(KeypadField.ROLLED) }
-                    ConfigTile("Tenuti", "${cfg.kept}") { viewModel.openKeypad(KeypadField.KEPT) }
+                    ConfigTile("Rolled", "${cfg.rolled}") { viewModel.openKeypad(KeypadField.ROLLED) }
+                    ConfigTile("Kept", "${cfg.kept}") { viewModel.openKeypad(KeypadField.KEPT) }
                     ConfigTile("Bonus", signed(cfg.bonus)) { viewModel.openKeypad(KeypadField.BONUS) }
                 }
 
@@ -172,7 +172,7 @@ private fun DiceTopBar(name: String, subtitle: String, badgeGlyph: String, onBac
             modifier = Modifier.clickable(onClick = onBack).padding(end = Spacing.s4),
         )
         Column(Modifier.weight(1f)) {
-            Text(name.ifBlank { "Tiro Dadi" }, style = L5RTheme.type.heading2.copy(color = colors.ink))
+            Text(name.ifBlank { "Dice Roll" }, style = L5RTheme.type.heading2.copy(color = colors.ink))
             if (subtitle.isNotBlank()) {
                 Text(subtitle, style = L5RTheme.type.caption.copy(color = colors.inkMuted))
             }
@@ -190,10 +190,10 @@ private fun DiceTopBar(name: String, subtitle: String, badgeGlyph: String, onBac
 private fun RollTypeControl(selected: RollType, onSelect: (RollType) -> Unit) {
     SegmentedControl(
         options = listOf(
-            Segment(RollType.SKILL, "Abilità"),
-            Segment(RollType.TRAIT, "Tratto"),
-            Segment(RollType.RING, "Anello"),
-            Segment(RollType.SPELL, "Incant."),
+            Segment(RollType.SKILL, "Skill"),
+            Segment(RollType.TRAIT, "Trait"),
+            Segment(RollType.RING, "Ring"),
+            Segment(RollType.SPELL, "Spell"),
         ),
         selected = selected,
         onSelect = onSelect,
@@ -204,8 +204,8 @@ private fun RollTypeControl(selected: RollType, onSelect: (RollType) -> Unit) {
 private fun ModeControl(selected: RollMode, onSelect: (RollMode) -> Unit) {
     SegmentedControl(
         options = listOf(
-            Segment(RollMode.OPEN, "Aperto"),
-            Segment(RollMode.TN, "Con TN"),
+            Segment(RollMode.OPEN, "Open"),
+            Segment(RollMode.TN, "vs TN"),
         ),
         selected = selected,
         onSelect = onSelect,
@@ -216,7 +216,7 @@ private fun ModeControl(selected: RollMode, onSelect: (RollMode) -> Unit) {
 private fun SkilledControl(skilled: Boolean, onSelect: (Boolean) -> Unit) {
     // Uses the muted-ink fill to set it apart from the crimson mode toggle (design §Skilled).
     SegmentedControl(
-        options = listOf(Segment(true, "Esperto"), Segment(false, "Inesperto")),
+        options = listOf(Segment(true, "Skilled"), Segment(false, "Unskilled")),
         selected = skilled,
         onSelect = onSelect,
         activeBg = L5RTheme.colors.inkMuted,
@@ -226,9 +226,9 @@ private fun SkilledControl(skilled: Boolean, onSelect: (Boolean) -> Unit) {
 @Composable
 private fun NoteLine(effSkilled: Boolean, emphasis: Boolean) {
     val text = when {
-        emphasis -> "Enfasi — gli 1 vengono ritirati una volta."
-        !effSkilled -> "Tiro inesperto — i 10 non esplodono e non puoi dichiarare Raise."
-        else -> "Notazione Roll & Keep — XkY: tira X dadi, tieni gli Y migliori. I 10 esplodono."
+        emphasis -> "Emphasis — 1s are rerolled once."
+        !effSkilled -> "Unskilled roll — 10s don't explode and you can't declare Raises."
+        else -> "Roll & Keep notation — XkY: roll X dice, keep the best Y. 10s explode."
     }
     Text(
         text,
@@ -244,10 +244,10 @@ private fun HeroNotation(state: DiceUiState) {
     val cfg = state.config
     val eff = state.effective
     val header = when (cfg.rollType) {
-        RollType.SKILL -> "Tiro di abilità"
-        RollType.TRAIT -> "Tiro di tratto"
-        RollType.RING -> "Tiro di anello"
-        RollType.SPELL -> "Tiro di incantesimo"
+        RollType.SKILL -> "Skill roll"
+        RollType.TRAIT -> "Trait roll"
+        RollType.RING -> "Ring roll"
+        RollType.SPELL -> "Spell roll"
     }
     Column(
         Modifier.fillMaxWidth(),
@@ -290,12 +290,12 @@ private fun VoidCard(spent: Boolean, promotes: Boolean, budget: Int?, onToggle: 
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            SectionLabel("Punto del Vuoto")
-            val hint = if (budget != null) "$budget disponibili" else "1 per tiro"
+            SectionLabel("Void Point")
+            val hint = if (budget != null) "$budget available" else "1 per roll"
             Text(hint, style = L5RTheme.type.caption.copy(color = colors.inkFaint))
         }
         ToggleBar(
-            label = if (depleted && !spent) "✦ Nessun punto disponibile" else "✦ Spendi — +1k1",
+            label = if (depleted && !spent) "✦ No points available" else "✦ Spend — +1k1",
             active = spent,
             onClick = onToggle,
             activeBg = colors.accentGold,
@@ -303,7 +303,7 @@ private fun VoidCard(spent: Boolean, promotes: Boolean, budget: Int?, onToggle: 
         )
         if (promotes) {
             Text(
-                "Il tiro inesperto diventa esperto (grado 1)",
+                "The unskilled roll becomes skilled (rank 1)",
                 style = L5RTheme.type.captionItalic.copy(color = colors.accentGold),
             )
         }
@@ -320,7 +320,7 @@ private fun TnRow(state: DiceUiState, viewModel: DiceViewModel) {
         horizontalArrangement = Arrangement.spacedBy(Spacing.s3),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        ConfigTile("TN base", "${cfg.tn}") { viewModel.openKeypad(KeypadField.TN) }
+        ConfigTile("Base TN", "${cfg.tn}") { viewModel.openKeypad(KeypadField.TN) }
 
         if (eff.effSkilled) {
             Column(
@@ -353,7 +353,7 @@ private fun TnRow(state: DiceUiState, viewModel: DiceViewModel) {
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    "Non disponibili sui tiri inesperti",
+                    "Not available on unskilled rolls",
                     style = L5RTheme.type.captionItalic.copy(color = colors.inkFaint),
                     textAlign = TextAlign.Center,
                 )
@@ -375,7 +375,7 @@ private fun RollButton(rolling: Boolean, onRoll: () -> Unit) {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            if (rolling) "⚁  Lancio…" else "⚀  Tira i dadi",
+            if (rolling) "⚁  Rolling…" else "⚀  Roll the dice",
             style = DiceType.rollButton.copy(color = colors.paperLight),
         )
     }
