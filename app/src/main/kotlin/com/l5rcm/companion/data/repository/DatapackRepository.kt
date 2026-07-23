@@ -58,6 +58,28 @@ class DatapackRepository(
     /** Pack refs in [save] that are not currently installed (mirrors get_missing_dependencies). */
     suspend fun missingDependencies(save: SaveModel): List<PackRef> {
         val installedIds = prefs.installedPacksNow().map { it.id }.toSet()
-        return save.pack_refs.filter { it.id.isNotEmpty() && it.id !in installedIds }
+        return requiredDependencies(save).filter { it.id !in installedIds }
+    }
+
+    companion object {
+        /**
+         * The base rulebook pack. Every character implicitly depends on it (the desktop always
+         * loads `core.data`), so it's required even when the save omits it from `pack_refs`.
+         */
+        val CORE_REF = PackRef(id = "core", name = "Core book")
+
+        /**
+         * The datapacks a character needs. Always includes `core`, then any explicit `pack_refs`.
+         * Real saves frequently ship an empty `pack_refs` (it's derived on save and redundant on
+         * the desktop, which bundles core), so we can't rely on it to surface the core dependency.
+         */
+        fun requiredDependencies(save: SaveModel): List<PackRef> {
+            val explicit = save.pack_refs.filter { it.id.isNotEmpty() }
+            return if (explicit.any { it.id.equals(CORE_REF.id, ignoreCase = true) }) {
+                explicit
+            } else {
+                listOf(CORE_REF) + explicit
+            }
+        }
     }
 }
