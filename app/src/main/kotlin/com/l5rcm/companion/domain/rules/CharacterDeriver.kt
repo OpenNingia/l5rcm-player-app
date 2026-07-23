@@ -5,6 +5,7 @@ import com.l5rcm.companion.data.save.AttribAdv
 import com.l5rcm.companion.data.save.KataAdv
 import com.l5rcm.companion.data.save.KihoAdv
 import com.l5rcm.companion.data.save.MemoSpellAdv
+import com.l5rcm.companion.data.save.PackRef
 import com.l5rcm.companion.data.save.PerkAdv
 import com.l5rcm.companion.data.save.SaveModel
 import com.l5rcm.companion.data.save.SkillAdv
@@ -235,10 +236,24 @@ object CharacterDeriver {
                     save.money.getOrElse(2) { 0 },
                 ),
                 properties = save.properties,
-                packRefs = save.pack_refs.map {
+                packRefs = corePlusRefs(save).map {
                     PackRefView(it.id, it.name, it.version, installed = it.id in packs.packIds)
                 },
             )
+        }
+
+        /**
+         * The save's explicit `pack_refs` with `core` guaranteed present: every character depends
+         * on the base rulebook even when the save ships an empty `pack_refs` (see
+         * DatapackRepository.requiredDependencies — mirrored here to keep the deriver pure).
+         */
+        private fun corePlusRefs(save: SaveModel): List<PackRef> {
+            val explicit = save.pack_refs.filter { it.id.isNotEmpty() }
+            return if (explicit.any { it.id.equals("core", ignoreCase = true) }) {
+                explicit
+            } else {
+                listOf(PackRef(id = "core", name = "Core book")) + explicit
+            }
         }
 
         private fun buildHealth(insightR: Int): HealthView {
