@@ -9,6 +9,8 @@ import com.l5rcm.companion.data.repository.CharacterRepository
 import com.l5rcm.companion.data.repository.DatapackRepository
 import com.l5rcm.companion.data.repository.StoredCharacter
 import com.l5rcm.companion.data.save.SaveModel
+import com.l5rcm.companion.data.session.SessionNote
+import com.l5rcm.companion.data.session.SessionNotesRepository
 import com.l5rcm.companion.data.session.SessionRepository
 import com.l5rcm.companion.data.session.SessionState
 import com.l5rcm.companion.domain.model.CharacterView
@@ -43,6 +45,7 @@ class AppViewModel @Inject constructor(
     private val characterRepo: CharacterRepository,
     private val datapackRepo: DatapackRepository,
     private val sessionRepo: SessionRepository,
+    private val notesRepo: SessionNotesRepository,
 ) : ViewModel() {
 
     private val _character = MutableStateFlow<CharacterUiState>(CharacterUiState.Empty)
@@ -133,6 +136,23 @@ class AppViewModel @Inject constructor(
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** Latest emitted notes list, cached so [saveSessionNote] can assign/preserve the session number. */
+    @Volatile
+    private var lastNotes: List<SessionNote> = emptyList()
+
+    /** The loaded character's session notes (newest first), or empty when no character is loaded. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val sessionNotes: StateFlow<List<SessionNote>> = charContext
+        .flatMapLatest { ctx ->
+            if (ctx == null) {
+                lastNotes = emptyList()
+                flowOf(emptyList())
+            } else {
+                notesRepo.observe(ctx.uuid).map { notes -> notes.also { lastNotes = it } }
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     init {
         observeInstalledPacks()
@@ -292,6 +312,26 @@ class AppViewModel @Inject constructor(
 
     /** Toggle whether the character's armor is worn; when removed its Armor TN / RD bonus drops. */
     fun toggleArmor() = mutate { it.copy(armorEquipped = !it.armorEquipped) }
+
+    // --- Session notes (per-character play-session log; never written to the .l5r) ---
+
+    /**
+     * Create ([id] == 0) or update a session note. New notes get the next per-character session
+     * number; edits keep their existing number. The owning [characterUuid][SessionNote.characterUuid]
+     * comes from the loaded character, so callers only supply the date + body.
+     */
+    fun saveSessionNote(id: Long, date: Long, body: String) {
+        val ctx = charContext.value ?: return
+        val number = lastNotes.firstOrNull { it.id == id }?.number
+            ?: ((lastNotes.maxOfOrNull { it.number } ?: 0) + 1)
+        viewModelScope.launch {
+            notesRepo.save(SessionNote(id = id, characterUuid = ctx.uuid, number = number, date = date, body = body))
+        }
+    }
+
+    fun deleteSessionNote(id: Long) {
+        viewModelScope.launch { notesRepo.delete(id) }
+    }
 
     /**
      * Burn ([delta] = +1) or reclaim ([delta] = −1) one spell slot from [ring]'s pool (Void = the

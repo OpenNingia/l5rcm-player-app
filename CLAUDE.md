@@ -73,10 +73,12 @@ data/
                redirect target, ZipExtractor with a zip-slip path-traversal guard.
   repository/ CharacterRepository (SAF load), DatapackRepository (install/enable/merge/missing-deps),
              AppPreferences (DataStore: installed-pack registry + last-opened character uri).
-  session/   Room session overlay — play-time state keyed per character uuid (wounds now; Void /
-             spell-slots later). SessionState entity + DAO + SessionDatabase + SessionRepository.
+  session/   Room session overlay — play-time state keyed per character uuid (wounds, Void, stance,
+             equipped weapon, armor-worn, spell-slots). SessionState (one row/char) + SessionNote
+             (one-to-many play-session log: date + per-char counter + body) + their DAOs +
+             SessionDatabase + SessionRepository / SessionNotesRepository.
              Layer B: merged onto the derived baseline in AppViewModel, NEVER writes the .l5r.
-             A missing row = "no overlay yet" → the derived baseline applies.
+             A missing SessionState row = "no overlay yet" → the derived baseline applies.
 domain/
   model/     Trait/Ring enums, immutable CharacterView (+ sub-views) the UI consumes.
   rules/     CharacterDeriver — the heart. PURE Kotlin, no Android. Ports the desktop's

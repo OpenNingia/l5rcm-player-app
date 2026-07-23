@@ -51,9 +51,13 @@ fun ImportRouter(
     when (state) {
         is CharacterUiState.Ready -> {
             val combat by viewModel.combat.collectAsStateWithLifecycle()
+            val notes by viewModel.sessionNotes.collectAsStateWithLifecycle()
             SheetScreen(
                 view = state.view,
                 combat = combat,
+                notes = notes,
+                onSaveNote = viewModel::saveSessionNote,
+                onDeleteNote = viewModel::deleteSessionNote,
                 onDamage = viewModel::applyDamage,
                 onHeal = viewModel::applyHeal,
                 onRest = viewModel::rest,

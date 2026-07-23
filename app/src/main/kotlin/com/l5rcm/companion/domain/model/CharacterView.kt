@@ -43,8 +43,6 @@ data class CharacterView(
 
     val money: Money,
     val properties: Map<String, String>,
-    /** Free-form notes — Qt rich-text HTML. */
-    val notesHtml: String,
     val packRefs: List<PackRefView>,
 )
 

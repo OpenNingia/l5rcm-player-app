@@ -36,6 +36,7 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.l5rcm.companion.data.session.SessionNote
 import com.l5rcm.companion.domain.model.CharacterView
 import com.l5rcm.companion.domain.model.Ring
 import com.l5rcm.companion.domain.rules.Stance
@@ -68,6 +69,9 @@ fun SheetScreen(
     onSetFullDefenseTotal: (Int) -> Unit,
     onSpellSlot: (Ring, Int) -> Unit,
     onCombatRoll: (DicePreset) -> Unit,
+    notes: List<SessionNote>,
+    onSaveNote: (Long, Long, String) -> Unit,
+    onDeleteNote: (Long) -> Unit,
     onOpenLibrary: () -> Unit,
     onImport: () -> Unit,
     onScanQr: () -> Unit,
@@ -135,6 +139,9 @@ fun SheetScreen(
                         onSetFullDefenseTotal = onSetFullDefenseTotal,
                         onSpellSlot = onSpellSlot,
                         onCombatRoll = onCombatRoll,
+                        notes = notes,
+                        onSaveNote = onSaveNote,
+                        onDeleteNote = onDeleteNote,
                     )
                 }
             }
