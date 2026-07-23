@@ -67,6 +67,12 @@ object CharacterDeriver {
         else -> 1
     }
 
+    /**
+     * Insight value at which the *next* rank is reached (drives the progression bar). Rank 2 is
+     * reached at 150 and each rank after steps +25 (the inverse of [insightRankFromValue]).
+     */
+    fun nextInsightThreshold(rank: Int): Int = 125 + 25 * rank.coerceAtLeast(1)
+
     /** Encapsulates one derivation pass so intermediate values are computed once. */
     private class Derivation(val save: SaveModel, val packs: DatapackSet) {
 
@@ -206,11 +212,14 @@ object CharacterDeriver {
                 clanName = packs.clan(save.clan)?.name ?: save.clan,
                 familyName = familyDef?.name ?: save.family,
                 schoolName = firstSchoolDef?.name ?: firstRank?.school,
+                familyBonusTrait = familyDef?.trait,
+                schoolBonusTrait = firstSchoolDef?.trait,
                 traits = Trait.entries.map { TraitView(it, traitRank(it), modifiedTraitRank(it)) },
                 rings = Ring.elementRings.map { RingView(it, ringRank(it)) },
                 voidRank = voidRank(),
                 insightRank = insightR,
                 insightValue = insightV,
+                insightNextThreshold = nextInsightThreshold(insightR),
                 honor = honor(),
                 glory = 1.0 + save.glory,
                 status = 1.0 + save.status,

@@ -6,9 +6,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
@@ -25,9 +29,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.sp
 import com.l5rcm.companion.data.session.SessionNote
 import com.l5rcm.companion.domain.dice.RollConfig
 import com.l5rcm.companion.domain.dice.RollMode
@@ -47,12 +57,13 @@ import com.l5rcm.companion.ui.dice.DicePreset
 import com.l5rcm.companion.ui.theme.L5RTheme
 import com.l5rcm.companion.ui.theme.Radii
 import com.l5rcm.companion.ui.theme.Spacing
+import com.l5rcm.companion.ui.widgets.GradientRule
 import com.l5rcm.companion.ui.widgets.PlainRule
-import com.l5rcm.companion.ui.widgets.PointTrack
 import com.l5rcm.companion.ui.widgets.RingCard
 import com.l5rcm.companion.ui.widgets.SectionHeader
 import com.l5rcm.companion.ui.widgets.SheetPanel
 import com.l5rcm.companion.ui.widgets.StatRow
+import com.l5rcm.companion.ui.widgets.VirtueRow
 
 /** Renders the body for the selected [section]. */
 @Composable
@@ -76,7 +87,9 @@ fun SectionContent(
     onSaveNote: (Long, Long, String) -> Unit,
     onDeleteNote: (Long) -> Unit,
 ) {
-    SectionHeader(section.title, section.kanji)
+    // The Character section carries its own identity header in the app bar + identity panel
+    // (design handoff), so it skips the big kanji section header the other sections use.
+    if (section != SheetSection.CHARACTER) SectionHeader(section.title, section.kanji)
     when (section) {
         SheetSection.CHARACTER -> CharacterSection(view)
         SheetSection.COMBAT -> CombatSection(
@@ -97,68 +110,275 @@ fun SectionContent(
     }
 }
 
+/**
+ * The redesigned **Character** overview (design handoff): identity + insight progression, the five
+ * Rings with their attributes, the unified Social/Spiritual tracks, Experience, and Wounds & Defense.
+ * Read-only — session/combat state lives in the Combat tab.
+ */
 @Composable
 private fun CharacterSection(view: CharacterView) {
-    // Rings (four elements + void) as colored cards, two per row.
-    val ringCards = view.rings.map { Triple(it.ring.id, it.ring.name, it.rank) } +
-        Triple("void", "Void", view.voidRank)
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.s2)) {
-        ringCards.chunked(2).forEach { pair ->
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s2), modifier = Modifier.fillMaxWidth()) {
-                pair.forEach { (id, name, rank) ->
-                    RingCard(id, name, rank, modifier = Modifier.weight(1f))
+    IdentityPanel(view)
+    RingsAndAttributes(view)
+    SocialSpiritualPanel(view)
+    ExperiencePanel(view)
+    WoundsDefensePanel(view)
+}
+
+/** Paper-light bordered card matching the design handoff panel (radius 8, padding 16). */
+@Composable
+private fun PaperPanel(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    val colors = L5RTheme.colors
+    val shape = RoundedCornerShape(8.dp)
+    Column(
+        modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(colors.paperLight)
+            .border(1.dp, colors.parchmentBorder, shape)
+            .padding(Spacing.s4),
+    ) {
+        content()
+    }
+}
+
+/** Gold Cinzel section title + fading hairline (design handoff section header). */
+@Composable
+private fun PanelHeader(title: String) {
+    Text(
+        title.uppercase(),
+        style = L5RTheme.type.label.copy(color = L5RTheme.colors.accentGold, letterSpacing = 0.12.em),
+    )
+    GradientRule(Modifier.padding(top = Spacing.s2, bottom = Spacing.s3))
+}
+
+// --- 1. Identity / progression ------------------------------------------------------------------
+
+@Composable
+private fun IdentityPanel(view: CharacterView) {
+    val colors = L5RTheme.colors
+    PaperPanel {
+        IdentityRow("Clan", view.clanName ?: view.clanId ?: "Rōnin", valueColor = colors.accentGold)
+        view.familyName?.let { IdentityRow("Family", it, bonusTrait = view.familyBonusTrait) }
+        view.schoolName?.let { IdentityRow("School", it, bonusTrait = view.schoolBonusTrait) }
+
+        GradientRule(Modifier.padding(vertical = Spacing.s4))
+
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+            Column {
+                IdentityLabel("Insight Rank")
+                Text(
+                    "${view.insightRank}",
+                    style = L5RTheme.type.statLarge.copy(
+                        color = colors.ink,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 34.sp,
+                    ),
+                )
+            }
+            Column(Modifier.weight(1f).padding(start = Spacing.s4)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    IdentityLabel("Insight", Modifier.alignByBaseline())
+                    Text(
+                        "${view.insightValue}",
+                        style = L5RTheme.type.statMedium.copy(color = colors.accentGold),
+                        modifier = Modifier.alignByBaseline(),
+                    )
                 }
-                if (pair.size == 1) androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+                InsightBar(view.insightValue, view.insightNextThreshold, Modifier.padding(top = Spacing.s2))
+                Text(
+                    "${view.insightValue} / ${view.insightNextThreshold} to Rank ${view.insightRank + 1}",
+                    style = L5RTheme.type.captionItalic.copy(color = colors.inkFaint),
+                    modifier = Modifier.padding(top = Spacing.s1),
+                )
             }
-        }
-    }
-
-    SheetPanel("Traits") {
-        view.traits.forEach { t ->
-            val value = if (t.modifiedRank != t.rank) "${t.modifiedRank} (${t.rank})" else "${t.rank}"
-            StatRow(t.trait.id.replaceFirstChar { it.uppercase() }, value)
-        }
-    }
-
-    SheetPanel("Insight & Honor") {
-        StatRow("Insight Rank", "${view.insightRank}")
-        StatRow("Insight", "${view.insightValue}")
-        PlainRule(Modifier.padding(vertical = Spacing.s2))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.s5)) {
-            PointTrack("Honor", view.honor, L5RTheme.colors.success)
-            PointTrack("Glory", view.glory, L5RTheme.colors.warning)
-        }
-        StatRow("Status", String.format("%.1f", view.status))
-        if (view.taint > 0) StatRow("Taint", String.format("%.1f", view.taint))
-        if (view.infamy > 0) StatRow("Infamy", String.format("%.1f", view.infamy))
-    }
-
-    SheetPanel("Experience") {
-        StatRow("Spent", "${view.xp.spent}")
-        StatRow("Available", "${view.xp.available}")
-        StatRow("Remaining", "${view.xp.left}")
-        if (view.xp.fromFlaws > 0) StatRow("From flaws", "+${view.xp.fromFlaws}")
-    }
-
-    SheetPanel("Wounds & Defense") {
-        StatRow("Earth", "${view.health.earthRank}")
-        StatRow("Wounds", "${view.health.currentWounds} / ${view.health.maxWounds}")
-        StatRow("Heal rate", "${view.health.healRate}")
-        StatRow("Base TN", "${view.combat.baseTn}")
-        StatRow("Full TN (armor)", "${view.combat.fullTn}")
-        StatRow("Reduction", "${view.combat.fullRd}")
-        StatRow("Initiative", "${view.combat.initiativeRoll}k${view.combat.initiativeKeep}")
-        PlainRule(Modifier.padding(vertical = Spacing.s2))
-        view.health.levels.forEach { level ->
-            val right = buildString {
-                level.threshold?.let { append("≤$it") }
-                append("  ·  ")
-                append(if (level.penalty == null) "Out" else "+${level.penalty}")
-            }
-            StatRow(level.name, right)
         }
     }
 }
+
+/** A CLAN/FAMILY/SCHOOL row: fixed-width Cinzel label + EB Garamond value with an optional bonus badge. */
+@Composable
+private fun IdentityRow(
+    label: String,
+    value: String,
+    valueColor: Color = L5RTheme.colors.ink,
+    bonusTrait: String? = null,
+) {
+    val colors = L5RTheme.colors
+    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.Top) {
+        IdentityLabel(label, Modifier.width(76.dp).padding(top = 3.dp))
+        val text = buildAnnotatedString {
+            append(value)
+            if (bonusTrait != null) {
+                withStyle(SpanStyle(color = colors.success, fontSize = 12.sp)) {
+                    append("  ·  +1 ${bonusTrait.replaceFirstChar { it.uppercase() }}")
+                }
+            }
+        }
+        Text(
+            text,
+            style = L5RTheme.type.statSmall.copy(color = valueColor, fontSize = 16.sp),
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
+private fun IdentityLabel(text: String, modifier: Modifier = Modifier) {
+    Text(
+        text.uppercase(),
+        style = L5RTheme.type.label.copy(
+            color = L5RTheme.colors.inkMuted,
+            fontSize = 10.sp,
+            letterSpacing = 0.1.em,
+        ),
+        modifier = modifier,
+    )
+}
+
+/** The 6px insight progress bar (bordered paper-dark track, gold fill at value/threshold). */
+@Composable
+private fun InsightBar(value: Int, threshold: Int, modifier: Modifier = Modifier) {
+    val colors = L5RTheme.colors
+    val shape = RoundedCornerShape(3.dp)
+    val fraction = if (threshold > 0) (value.toFloat() / threshold).coerceIn(0f, 1f) else 0f
+    Box(
+        modifier
+            .fillMaxWidth()
+            .height(6.dp)
+            .clip(shape)
+            .background(colors.paperDark)
+            .border(1.dp, colors.parchmentBorder, shape),
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth(fraction)
+                .fillMaxHeight()
+                .clip(shape)
+                .background(colors.accentGold),
+        )
+    }
+}
+
+// --- 2. Rings & attributes ----------------------------------------------------------------------
+
+private val RING_KANJI = mapOf(
+    "earth" to "地", "air" to "風", "water" to "水", "fire" to "火", "void" to "空",
+)
+
+@Composable
+private fun RingsAndAttributes(view: CharacterView) {
+    Column {
+        PanelHeader("Rings & Attributes")
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            view.rings.chunked(2).forEach { pair ->
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                    pair.forEach { rv ->
+                        val attrs = rv.ring.traits.map { t ->
+                            val tv = view.traits.first { it.trait == t }
+                            t.id.replaceFirstChar { it.uppercase() } to tv.modifiedRank
+                        }
+                        RingCard(
+                            ringId = rv.ring.id,
+                            ringName = rv.ring.name,
+                            value = rv.rank,
+                            kanji = RING_KANJI[rv.ring.id].orEmpty(),
+                            attrs = attrs,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    if (pair.size == 1) Spacer(Modifier.weight(1f))
+                }
+            }
+        }
+        RingCard(
+            ringId = "void",
+            ringName = "Void",
+            value = view.voidRank,
+            kanji = RING_KANJI["void"].orEmpty(),
+            attrs = emptyList(),
+            modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+        )
+    }
+}
+
+// --- 3. Social / spiritual ----------------------------------------------------------------------
+
+@Composable
+private fun SocialSpiritualPanel(view: CharacterView) {
+    val colors = L5RTheme.colors
+    PaperPanel {
+        Text(
+            "SOCIAL / SPIRITUAL",
+            style = L5RTheme.type.label.copy(color = colors.accentGold, letterSpacing = 0.12.em),
+        )
+        GradientRule(Modifier.padding(top = Spacing.s2, bottom = Spacing.s1))
+        Text(
+            "Dots are tenths of a rank.",
+            style = L5RTheme.type.captionItalic.copy(color = colors.inkFaint),
+            modifier = Modifier.padding(bottom = Spacing.s3),
+        )
+        VirtueRow("Honor", view.honor, colors.success, showTopBorder = false)
+        VirtueRow("Glory", view.glory, colors.warning, showTopBorder = true)
+        VirtueRow("Status", view.status, colors.accentBlue, showTopBorder = true)
+        if (view.taint > 0) VirtueRow("Taint", view.taint, colors.accentCrimson, showTopBorder = true)
+        if (view.infamy > 0) VirtueRow("Infamy", view.infamy, colors.warning, showTopBorder = true)
+    }
+}
+
+// --- 4. Experience ------------------------------------------------------------------------------
+
+@Composable
+private fun ExperiencePanel(view: CharacterView) {
+    PaperPanel {
+        PanelHeader("Experience")
+        ValueRow("Spent", "${view.xp.spent}")
+        ValueRow("Available", "${view.xp.available}")
+        ValueRow("Remaining", "${view.xp.left}")
+        if (view.xp.fromFlaws > 0) ValueRow("From flaws", "+${view.xp.fromFlaws}")
+    }
+}
+
+// --- 5. Wounds & defense ------------------------------------------------------------------------
+
+@Composable
+private fun WoundsDefensePanel(view: CharacterView) {
+    PaperPanel {
+        PanelHeader("Wounds & Defense")
+        ValueRow("Earth", "${view.health.earthRank}")
+        // The Character sheet is the static baseline; the live wound count lives in the Combat tab,
+        // so here we show only the total capacity (not "current / max", which would never update).
+        ValueRow("Wounds", "${view.health.maxWounds}")
+        ValueRow("Heal rate", "${view.health.healRate}")
+        ValueRow("Base TN", "${view.combat.baseTn}")
+        ValueRow("Full TN (armor)", "${view.combat.fullTn}")
+        ValueRow("Reduction", "${view.combat.fullRd}")
+        ValueRow("Initiative", "${view.combat.initiativeRoll}k${view.combat.initiativeKeep}")
+        // No wound-level ladder here: without a live "you are here" marker it can't update, and the
+        // interactive version already lives in the Combat tab.
+    }
+}
+
+/** A label/value row in the design-handoff style: IM Fell label, EB Garamond value. */
+@Composable
+private fun ValueRow(label: String, value: String) {
+    val colors = L5RTheme.colors
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 5.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Bottom,
+    ) {
+        Text(label, style = L5RTheme.type.body.copy(color = colors.inkMuted, fontSize = 15.sp))
+        Text(
+            value,
+            style = L5RTheme.type.statSmall.copy(
+                color = colors.ink,
+                fontWeight = FontWeight.Medium,
+                fontSize = 18.sp,
+            ),
+        )
+    }
+}
+
 
 // --- Combat tab: session overlay (wounds · Void · stance · equipped weapon) + dice presets ---
 

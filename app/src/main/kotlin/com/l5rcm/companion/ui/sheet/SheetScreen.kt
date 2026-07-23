@@ -18,8 +18,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalDrawerSheet
@@ -35,13 +37,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.l5rcm.companion.data.session.SessionNote
 import com.l5rcm.companion.domain.model.CharacterView
 import com.l5rcm.companion.domain.model.Ring
 import com.l5rcm.companion.domain.rules.Stance
 import com.l5rcm.companion.ui.CombatUiState
 import com.l5rcm.companion.ui.dice.DicePreset
+import com.l5rcm.companion.ui.theme.ClanAccent
 import com.l5rcm.companion.ui.theme.L5RTheme
 import com.l5rcm.companion.ui.theme.Layout
 import com.l5rcm.companion.ui.theme.Spacing
@@ -113,7 +120,7 @@ fun SheetScreen(
             RicePaperOverlay(Modifier.fillMaxSize())
             Column(Modifier.fillMaxSize()) {
                 TopBar(
-                    title = view.name.ifBlank { "Character" },
+                    view = view,
                     onMenu = { scope.launch { drawerState.open() } },
                 )
                 Column(
@@ -149,12 +156,20 @@ fun SheetScreen(
     }
 }
 
+/**
+ * The slim paper-dark app bar (design handoff): hamburger, the character name over a
+ * "Clan · Family · Rank N" subtitle, and a clan-accent tile carrying the 侍 (bushi) kanji.
+ */
 @Composable
-private fun TopBar(title: String, onMenu: () -> Unit) {
+private fun TopBar(view: CharacterView, onMenu: () -> Unit) {
+    val colors = L5RTheme.colors
+    val clan = ClanAccent.forClan(view.clanId)
+    val subtitle = (listOfNotNull(view.clanName ?: view.clanId, view.familyName) + "Rank ${view.insightRank}")
+        .joinToString(" · ")
     Row(
         Modifier
             .fillMaxWidth()
-            .background(L5RTheme.colors.paperDark)
+            .background(colors.paperDark)
             // edge-to-edge is on: keep the bar's content clear of the status bar and
             // the front-camera cutout (otherwise the hamburger lands under the lens).
             .windowInsetsPadding(
@@ -168,10 +183,35 @@ private fun TopBar(title: String, onMenu: () -> Unit) {
     ) {
         Text(
             "☰",
-            style = L5RTheme.type.display.copy(color = L5RTheme.colors.ink),
+            style = L5RTheme.type.display.copy(color = colors.inkMuted),
             modifier = Modifier.clickable(onClick = onMenu).padding(end = Spacing.s4),
         )
-        Text(title, style = L5RTheme.type.heading1.copy(color = L5RTheme.colors.ink))
+        Column(Modifier.weight(1f)) {
+            Text(
+                view.name.ifBlank { "Character" },
+                style = L5RTheme.type.heading1.copy(color = colors.ink, fontSize = 15.sp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (subtitle.isNotBlank()) {
+                Text(
+                    subtitle,
+                    style = L5RTheme.type.caption.copy(color = colors.inkMuted),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        Box(
+            Modifier
+                .padding(start = Spacing.s3)
+                .size(36.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(clan.primary),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("侍", style = L5RTheme.type.body.copy(color = Color.White, fontSize = 20.sp))
+        }
     }
 }
 
